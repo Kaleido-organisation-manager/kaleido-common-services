@@ -1,0 +1,65 @@
+name: CI/CD Pipeline on merge
+
+'on':
+  push:
+    branches:
+      - develop
+      - main
+  workflow_dispatch:
+
+jobs:
+  gitversion:
+    name: GitVersion
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.Semver.outputs.MajorMinorPatch }}
+    steps:
+      - uses: actions/checkout@v4
+        name: Checkout Repository
+        with:
+          fetch-depth: 0
+      - uses: gittools/actions/gitversion/setup@v3.0.0
+      - id: Semver
+        uses: gittools/actions/gitversion/execute@v3.0.0
+
+  build-common-services-grpc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        name: Checkout Repository
+      - name: Restore dependencies of Common.Services.Grpc
+        run: dotnet restore 
+        working-directory: src/Kaleido.Common.Services.Grpc
+      - name: Build Common.Services.Grpc
+        run: dotnet build
+        working-directory: src/Kaleido.Common.Services.Grpc
+
+  unit-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        name: Checkout Repository
+      - name: Restore dependencies of Unit tests
+        run: dotnet restore
+        working-directory: src/Kaleido.Common.Services.Grpc.Tests.Unit
+      - name: Run Unit tests
+        run: dotnet test
+        working-directory: src/Kaleido.Common.Services.Grpc.Tests.Unit
+
+  build-and-publish-client-package:
+    name: Build and Publish Client Package
+    needs: [unit-test, build-common-services-grpc, gitversion]
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        name: Checkout Repository
+      - name: Add github source
+        run: dotnet nuget add source --username ${{ github.actor }} --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+      - name: Pack Client Package
+        run: dotnet pack --configuration Release /p:Version=${{ needs.gitversion.outputs.version }}
+        working-directory: src/Kaleido.Common.Services.Grpc
+      - name: Publish Client Package
+        run: dotnet nuget push "bin/Release/Kaleido.Common.Services.Grpc.${{ needs.gitversion.outputs.version }}.nupkg" --api-key ${{ secrets.GITHUB_TOKEN }} --source "github"
+        working-directory: src/Kaleido.Common.Services.Grpc
