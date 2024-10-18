@@ -1,0 +1,29 @@
+name: CI Pipeline on Pull Request
+
+'on':
+  pull_request:
+
+jobs:
+  build-common-services-grpc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        name: Checkout Repository
+      - name: Restore dependencies of Common.Services.Grpc
+        run: dotnet restore
+        working-directory: src/Kaleido.Common.Services.Grpc
+      - name: Build Common.Services.Grpc
+        run: dotnet build
+        working-directory: src/Kaleido.Common.Services.Grpc
+
+  unit-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        name: Checkout Repository
+      - name: Restore dependencies of Unit tests
+        run: dotnet restore
+        working-directory: src/Kaleido.Common.Services.Grpc.Tests.Unit
+      - name: Run Unit tests
+        run: dotnet test
+        working-directory: src/Kaleido.Common.Services.Grpc.Tests.Unit
