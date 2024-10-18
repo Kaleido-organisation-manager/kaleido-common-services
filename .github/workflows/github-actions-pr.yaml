@@ -7,10 +7,10 @@ jobs:
   build-common-services-grpc:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         name: Checkout Repository
       - name: Restore dependencies of Common.Services.Grpc
-        run: dotnet restore 
+        run: dotnet restore
         working-directory: src/Kaleido.Common.Services.Grpc
       - name: Build Common.Services.Grpc
         run: dotnet build
@@ -19,7 +19,7 @@ jobs:
   unit-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         name: Checkout Repository
       - name: Restore dependencies of Unit tests
         run: dotnet restore
