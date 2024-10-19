@@ -92,14 +92,24 @@ public abstract class BaseRepository<T, U> : IBaseRepository<T>
         return storedEntity;
     }
 
+    public async Task<T?> GetLatestAsync(Guid key, CancellationToken cancellationToken = default)
+    {
+        return await _dbSet.Where(x => x.Key == key).OrderByDescending(x => x.Revision).FirstOrDefaultAsync();
+    }
+
     public async Task<T?> UpdateStatusAsync(Guid key, EntityStatus status, CancellationToken cancellationToken = default)
     {
-        var entity = await GetActiveAsync(key, cancellationToken);
+        var entity = await GetLatestAsync(key, cancellationToken);
         if (entity == null)
         {
             return null;
         }
 
+        if (entity.Status == status)
+        {
+            _logger.LogInformation("Entity {EntityName} with key: {Key} already has status: {Status}. Ignoring update", typeof(T).Name, entity.Key, status);
+            return entity;
+        }
         _logger.LogInformation("Updating {EntityName} with key: {Key} to status: {Status}", typeof(T).Name, entity.Key, status);
         entity.Status = status;
         var stored = await UpdateEntityAsync(entity, cancellationToken);
