@@ -12,7 +12,7 @@ jobs:
     name: GitVersion
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.Semver.outputs.MajorMinorPatch }}
+      version: ${{ steps.Semver.outputs.FullSemVer }}
     steps:
       - uses: actions/checkout@v4
         name: Checkout Repository
@@ -45,6 +45,21 @@ jobs:
       - name: Run Unit tests
         run: dotnet test
         working-directory: src/Kaleido.Common.Services.Grpc.Tests.Unit
+
+  git-tag-release:
+    name: Git Tag Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    needs: [unit-test, build-common-services-grpc, gitversion]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Bump version and push tag
+        uses: anothrNick/github-tag-action@v1 # Don't use @master or @v1 unless you're happy to test the latest version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # if you don't want to set write permissions use a PAT token
+          CUSTOM_TAG: ${{ needs.gitversion.outputs.version }}
 
   build-and-publish-client-package:
     name: Build and Publish Client Package
