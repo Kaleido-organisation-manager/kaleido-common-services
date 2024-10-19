@@ -310,6 +310,64 @@ public class BaseRepositoryTests : IClassFixture<BaseRepositoryFixture>
     }
 
     [Fact]
+    public async Task UpdateAsync_CreatesNewRevision()
+    {
+        // Arrange
+        var entity = new TestEntityBuilder().Build();
+
+        await _fixture.DbContext.TestEntities.AddAsync(entity);
+        await _fixture.DbContext.SaveChangesAsync();
+
+        // Act
+        var updatedEntity = await _fixture.Repository.UpdateAsync(entity);
+        var entityRevisions = await _fixture.Repository.GetAllRevisionsAsync(entity.Key);
+
+        // Assert
+        Assert.Equal(2, entityRevisions.Count());
+        Assert.Equal(2, updatedEntity.Revision);
+        Assert.Equal(EntityStatus.Active, updatedEntity.Status);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WithPreviousRevisionNotActive_CreatesCorrectNewRevision()
+    {
+        // Arrange
+        var entity = new TestEntityBuilder().WithStatus(EntityStatus.Archived).Build();
+
+        await _fixture.DbContext.TestEntities.AddAsync(entity);
+        await _fixture.DbContext.SaveChangesAsync();
+
+        // Act
+        var updateEntity = new TestEntityBuilder().WithKey(entity.Key).Build();
+        var updatedEntity = await _fixture.Repository.UpdateAsync(updateEntity);
+        var entityRevisions = await _fixture.Repository.GetAllRevisionsAsync(updatedEntity.Key);
+
+        // Assert
+        Assert.Equal(2, entityRevisions.Count());
+        Assert.Equal(2, updatedEntity.Revision);
+        Assert.Equal(EntityStatus.Active, updatedEntity.Status);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ArchivesPreviousRevision()
+    {
+        // Arrange
+        var entity = new TestEntityBuilder().Build();
+
+        await _fixture.DbContext.TestEntities.AddAsync(entity);
+        await _fixture.DbContext.SaveChangesAsync();
+
+        // Act
+        var updatedEntity = await _fixture.Repository.UpdateAsync(entity);
+        var entityRevisions = await _fixture.Repository.GetAllRevisionsAsync(entity.Key);
+
+        // Assert
+        Assert.Equal(2, entityRevisions.Count());
+        Assert.Equal(2, updatedEntity.Revision);
+        Assert.Equal(EntityStatus.Archived, entityRevisions.First(x => x.Revision == 1).Status);
+    }
+
+    [Fact]
     public async Task UpdateStatusAsync_UpdatesStatus()
     {
         // Arrange

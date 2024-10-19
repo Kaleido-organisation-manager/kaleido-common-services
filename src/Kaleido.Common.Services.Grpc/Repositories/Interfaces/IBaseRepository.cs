@@ -17,4 +17,5 @@ public interface IBaseRepository<T>
     Task<IEnumerable<T>> GetAllRevisionsAsync(Guid key, CancellationToken cancellationToken = default);
     Task<T?> GetRevisionAsync(Guid key, int revision, CancellationToken cancellationToken = default);
     Task<bool> ExistsAsync(Guid key, CancellationToken cancellationToken = default);
+    Task<T?> GetLatestAsync(Guid key, CancellationToken cancellationToken = default);
 }
