@@ -18,7 +18,7 @@ public class BaseRevisionRepositoryFixture : IDisposable
         var services = new ServiceCollection();
         // Register BaseDbContext without generic parameters
         services.AddDbContext<BaseDbContext>(options =>
-            options.UseInMemoryDatabase(databaseName: "TestEntities"));
+            options.UseInMemoryDatabase(databaseName: "TestRevisions"));
 
         services.AddScoped<IBaseRevisionRepository, BaseRevisionRepository>();
         services.AddScoped(s => s.GetRequiredService<BaseDbContext>().Revisions);
@@ -42,7 +42,10 @@ public class BaseRevisionRepositoryFixture : IDisposable
 
     public void ResetDatabase()
     {
-        DbContext.Entities.RemoveRange(DbContext.Entities);
-        DbContext.SaveChanges();
+        if (DbContext.Revisions.Any())
+        {
+            DbContext.Revisions.RemoveRange(DbContext.Revisions);
+            DbContext.SaveChanges();
+        }
     }
 }

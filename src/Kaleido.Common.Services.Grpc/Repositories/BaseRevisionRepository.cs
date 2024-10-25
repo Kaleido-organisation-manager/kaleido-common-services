@@ -3,9 +3,21 @@ using Kaleido.Common.Services.Grpc.Constants;
 using Kaleido.Common.Services.Grpc.Models;
 using Kaleido.Common.Services.Grpc.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.Extensions.Logging;
 
 namespace Kaleido.Common.Services.Grpc.Repositories;
+
+public class BaseRevisionRepository<TRevision> : BaseRevisionRepository<TRevision, BaseRevisionBuilder<TRevision>>
+where TRevision : BaseRevisionEntity, new()
+{
+    public BaseRevisionRepository(
+    DbSet<TRevision> dbSet,
+    DbContext context,
+    ILogger<TRevision> logger
+) : base(dbSet, context, logger)
+    { }
+}
 
 public class BaseRevisionRepository : BaseRevisionRepository<BaseRevisionEntity, BaseRevisionBuilder>, IBaseRevisionRepository
 {
@@ -18,7 +30,7 @@ public class BaseRevisionRepository : BaseRevisionRepository<BaseRevisionEntity,
     { }
 }
 
-public class BaseRevisionRepository<TRevisionEntity, TBuilder> : IBaseRevisionRepository<TRevisionEntity>
+public class BaseRevisionRepository<TRevisionEntity, TBuilder> : IBaseRevisionRepository<TRevisionEntity, TBuilder>
 where TRevisionEntity : BaseRevisionEntity, new()
 where TBuilder : BaseRevisionBuilder<TRevisionEntity>, new()
 {
@@ -55,9 +67,16 @@ where TBuilder : BaseRevisionBuilder<TRevisionEntity>, new()
         return await SaveEntityAsync(revisionBuilder.Build(), cancellationToken);
     }
 
-    public async Task<IEnumerable<TRevisionEntity>> GetAllAsync(Guid revisionKey, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<TRevisionEntity>> GetAllAsync(Guid? revisionKey = null, CancellationToken cancellationToken = default)
     {
-        return await DbSet.Where(x => x.Key == revisionKey).ToListAsync(cancellationToken);
+        if (revisionKey != null && revisionKey != Guid.Empty)
+        {
+            return await DbSet.Where(x => x.Key == revisionKey).ToListAsync(cancellationToken);
+        }
+        return await DbSet
+            .GroupBy(r => r.Key)
+            .Select(g => g.OrderByDescending(r => r.Revision).First())
+            .ToListAsync(cancellationToken);
     }
 
     public async Task<TRevisionEntity?> GetAsync(Guid revisionKey, int? revision = null, CancellationToken cancellationToken = default)
@@ -95,7 +114,7 @@ where TBuilder : BaseRevisionBuilder<TRevisionEntity>, new()
 
     public async Task<TRevisionEntity> UpdateAsync(Guid revisionKey, Guid entityId, TRevisionEntity? revision = null, CancellationToken cancellationToken = default)
     {
-        var previousRevision = await GetRevisionOrThrow(revisionKey, cancellationToken);
+        var previousRevision = await ValidateUpdateAsync(revisionKey, entityId, cancellationToken);
         var revisionBuilder = InitializeRevisionBuilder(previousRevision);
 
         if (previousRevision.Action == RevisionAction.Deleted)
@@ -105,6 +124,33 @@ where TBuilder : BaseRevisionBuilder<TRevisionEntity>, new()
 
         revisionBuilder = ConfigureRevisionBuilder(revisionBuilder, entityId, RevisionAction.Updated, previousRevision.Revision + 1, revision);
         return await SaveEntityAsync(revisionBuilder.Build(), cancellationToken);
+    }
+
+    public async Task<TRevisionEntity> ValidateUpdateAsync(Guid revisionKey, Guid? entityId = null, CancellationToken cancellationToken = default)
+    {
+        var previousRevision = await GetRevisionOrThrow(revisionKey, cancellationToken);
+
+        if (previousRevision.Action == RevisionAction.Deleted)
+        {
+            throw new InvalidOperationException("Cannot update a deleted revision.");
+        }
+
+        if (entityId != null && previousRevision.EntityId == entityId)
+        {
+            throw new InvalidOperationException("Update revision for this entity already exists");
+        }
+
+        return previousRevision;
+    }
+
+    public async Task<IEnumerable<TRevisionEntity>> GetAllByEntityIdAsync(Guid entityId, Guid? revisionKey = null, CancellationToken cancellationToken = default)
+    {
+        if (revisionKey != null)
+        {
+            var revisions = await GetAllAsync((Guid)revisionKey, cancellationToken);
+            return revisions.Where(r => r.EntityId == entityId);
+        }
+        return await DbSet.Where(r => r.EntityId == entityId).ToListAsync(cancellationToken);
     }
 
     private async Task<TRevisionEntity> SaveEntityAsync(TRevisionEntity entity, CancellationToken cancellationToken = default)

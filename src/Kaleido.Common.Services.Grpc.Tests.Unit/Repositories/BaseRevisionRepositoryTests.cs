@@ -51,14 +51,14 @@ namespace Kaleido.Common.Services.Grpc.Tests.Unit.Repositories
             // Arrange
             var entityId = Guid.NewGuid();
             var initialRevision = await _fixture.Repository.CreateAsync(entityId);
-            var updatedRevision = new BaseRevisionEntity { EntityId = entityId };
+            var updatedRevision = new BaseRevisionEntity { EntityId = Guid.NewGuid() };
 
             // Act
-            var result = await _fixture.Repository.UpdateAsync(initialRevision.Key, entityId, updatedRevision);
+            var result = await _fixture.Repository.UpdateAsync(initialRevision.Key, updatedRevision.EntityId, updatedRevision);
 
             // Assert
             Assert.NotNull(result);
-            Assert.Equal(entityId, result.EntityId);
+            Assert.Equal(updatedRevision.EntityId, result.EntityId);
             Assert.Equal(2, result.Revision);
             Assert.Equal(RevisionAction.Updated, result.Action);
         }
@@ -216,9 +216,8 @@ namespace Kaleido.Common.Services.Grpc.Tests.Unit.Repositories
         public async Task GetAllAsync_ReturnsAllRevisions()
         {
             // Arrange
-            var entityId = Guid.NewGuid();
-            var revision = await _fixture.Repository.CreateAsync(entityId);
-            await _fixture.Repository.UpdateAsync(revision.Key, entityId);
+            var revision = await _fixture.Repository.CreateAsync(Guid.NewGuid());
+            await _fixture.Repository.UpdateAsync(revision.Key, Guid.NewGuid());
 
             // Act
             var result = await _fixture.Repository.GetAllAsync(revision.Key);
@@ -226,6 +225,30 @@ namespace Kaleido.Common.Services.Grpc.Tests.Unit.Repositories
             // Assert
             Assert.NotEmpty(result);
             Assert.Equal(2, result.Count());
+        }
+
+        [Fact]
+        public async Task GetAllAsync_WithNoKey_ReturnsLatestVersionOfEachRevision()
+        {
+            // Arrange
+            var revision1 = await _fixture.Repository.CreateAsync(Guid.NewGuid());
+            var updatedRevision1 = await _fixture.Repository.UpdateAsync(revision1.Key, Guid.NewGuid());
+
+            var revision2 = await _fixture.Repository.CreateAsync(Guid.NewGuid());
+            var updatedRevision2 = await _fixture.Repository.UpdateAsync(revision2.Key, Guid.NewGuid());
+            var deletedRevision2 = await _fixture.Repository.DeleteAsync(revision2.Key);
+
+            // Act
+            var result = await _fixture.Repository.GetAllAsync();
+
+            // Assert
+            Assert.Equal(2, result.Count());
+            var revision1Result = result.FirstOrDefault(r => r.Key == revision1.Key);
+            Assert.NotNull(revision1Result);
+            Assert.Equal(2, revision1Result.Revision);
+            var revision2Result = result.FirstOrDefault(r => r.Key == revision2.Key);
+            Assert.NotNull(revision2Result);
+            Assert.Equal(3, revision2Result.Revision);
         }
 
         [Fact]
@@ -239,6 +262,56 @@ namespace Kaleido.Common.Services.Grpc.Tests.Unit.Repositories
 
             // Assert
             Assert.Empty(result);
+        }
+
+        [Fact]
+        public async Task RestoreAsync_ThrowsInvalidOperationException_WhenRevisionWasAlreadyRestored()
+        {
+            // Arrange
+            var entityId = Guid.NewGuid();
+            var revision = await _fixture.Repository.CreateAsync(entityId);
+            await _fixture.Repository.DeleteAsync(revision.Key, entityId);
+            await _fixture.Repository.RestoreAsync(revision.Key, entityId);
+
+            // Act & Assert
+            await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+                await _fixture.Repository.RestoreAsync(revision.Key, entityId));
+        }
+
+        [Fact]
+        public async Task GetHistoricAsync_ReturnsCorrectRevision()
+        {
+            // Arrange
+            var entityId = Guid.NewGuid();
+            var revision = await _fixture.Repository.CreateAsync(entityId);
+            var pointInTime = DateTime.UtcNow.AddMinutes(1);
+            var updateResult = await _fixture.Repository.UpdateAsync(revision.Key, Guid.NewGuid());
+
+            // Act
+            var result = await _fixture.Repository.GetHistoricAsync(revision.Key, pointInTime);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(revision.Key, result.Key);
+            Assert.Equal(updateResult.EntityId, result.EntityId);
+        }
+
+        [Fact]
+        public async Task GetAllByEntityIdAsync_ReturnsCorrectRevisions()
+        {
+            // Arrange
+            var entityId = Guid.NewGuid();
+            var revision1 = await _fixture.Repository.CreateAsync(entityId);
+            var revision2 = await _fixture.Repository.DeleteAsync(revision1.Key);
+
+            // Act
+            var result = await _fixture.Repository.GetAllByEntityIdAsync(entityId);
+
+            // Assert
+            Assert.NotEmpty(result);
+            Assert.Equal(2, result.Count());
+            Assert.Contains(result, r => r.Key == revision1.Key);
+            Assert.Contains(result, r => r.Key == revision2.Key);
         }
     }
 }

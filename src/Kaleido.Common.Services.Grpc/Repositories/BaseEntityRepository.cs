@@ -29,6 +29,10 @@ where TEntity : BaseEntity
 
     public async Task<TEntity> CreateAsync(TEntity entity, CancellationToken cancellationToken = default)
     {
+        if (entity == null)
+        {
+            throw new ArgumentNullException(nameof(entity), "Entity can not be null");
+        }
         entity.Id = Guid.NewGuid();
         var storedEntity = await DbSet.AddAsync(entity, cancellationToken);
         await Context.SaveChangesAsync(cancellationToken);

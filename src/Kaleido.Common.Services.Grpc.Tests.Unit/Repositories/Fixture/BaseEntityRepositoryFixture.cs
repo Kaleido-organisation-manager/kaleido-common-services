@@ -19,8 +19,8 @@ public class BaseEntityRepositoryFixture : IDisposable
         services.AddDbContext<BaseDbContext>(options =>
             options.UseInMemoryDatabase(databaseName: "TestEntities"));
         services.AddScoped<IBaseEntityRepository, BaseEntityRepository>();
-        services.AddSingleton(s => s.GetRequiredService<BaseDbContext>().Revisions);
-        services.AddSingleton<DbContext>(s => s.GetRequiredService<BaseDbContext>());
+        services.AddScoped(s => s.GetRequiredService<BaseDbContext>().Entities);
+        services.AddScoped<DbContext>(s => s.GetRequiredService<BaseDbContext>());
         services.AddLogging();
 
         _provider = services.BuildServiceProvider();
@@ -40,7 +40,10 @@ public class BaseEntityRepositoryFixture : IDisposable
 
     public void ResetDatabase()
     {
-        DbContext.Revisions.RemoveRange(DbContext.Revisions);
-        DbContext.SaveChanges();
+        if (DbContext.Entities.Any())
+        {
+            DbContext.Entities.RemoveRange(DbContext.Entities);
+            DbContext.SaveChanges();
+        }
     }
 }

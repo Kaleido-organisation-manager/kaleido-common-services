@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Kaleido.Common.Services.Grpc.Models;
 
-public abstract class BaseEntity
+public class BaseEntity
 {
     public Guid Id { get; set; }
 
