@@ -1,8 +1,10 @@
+using Kaleido.Common.Services.Grpc.Configuration;
+using Kaleido.Common.Services.Grpc.Configuration.Extensions;
 using Kaleido.Common.Services.Grpc.Handlers;
 using Kaleido.Common.Services.Grpc.Handlers.Interfaces;
+using Kaleido.Common.Services.Grpc.Models;
 using Kaleido.Common.Services.Grpc.Repositories;
 using Kaleido.Common.Services.Grpc.Repositories.Interfaces;
-using Kaleido.Common.Services.Grpc.Tests.Unit.Repositories.Mocks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -12,49 +14,50 @@ public class EntityLifeCycleHandlerFixture : IDisposable
 {
     private ServiceProvider _provider { get; set; }
 
-    public EntityDbContext DbContext { get; private set; }
+    public KaleidoDbContext<BaseEntity> EntityDbContext { get; private set; }
+    public KaleidoDbContext<BaseRevisionEntity> RevisionDbContext { get; private set; }
     public IEntityLifecycleHandler Handler { get; private set; }
 
     public EntityLifeCycleHandlerFixture()
     {
         var services = new ServiceCollection();
-        services.AddDbContext<EntityDbContext>(options =>
-            options.UseInMemoryDatabase(databaseName: "LifeCycleTests"));
+        services.AddKaleidoInMemoryDbContext<BaseEntity, BaseRevisionEntity>("LifeCycleTests");
+
         services.AddScoped<IBaseEntityRepository, BaseEntityRepository>();
         services.AddScoped<IBaseRevisionRepository, BaseRevisionRepository>();
         services.AddScoped<IEntityLifecycleHandler, EntityLifeCycleHandler>();
-        services.AddScoped(s => s.GetRequiredService<EntityDbContext>().Entities);
-        services.AddScoped(s => s.GetRequiredService<EntityDbContext>().Revisions);
-        services.AddScoped<DbContext>(s => s.GetRequiredService<EntityDbContext>());
         services.AddLogging();
 
         _provider = services.BuildServiceProvider();
 
-        DbContext = _provider.GetRequiredService<EntityDbContext>();
+        EntityDbContext = _provider.GetRequiredService<KaleidoDbContext<BaseEntity>>();
+        RevisionDbContext = _provider.GetRequiredService<KaleidoDbContext<BaseRevisionEntity>>();
         Handler = _provider.GetRequiredService<IEntityLifecycleHandler>();
 
-        DbContext.Database.EnsureCreated();
+        EntityDbContext.Database.EnsureCreated();
+        RevisionDbContext.Database.EnsureCreated();
 
     }
 
     public void Dispose()
     {
         _provider.Dispose();
-        DbContext.Dispose();
+        EntityDbContext.Dispose();
+        RevisionDbContext.Dispose();
     }
 
     public void ResetDatabase()
     {
-        if (DbContext.Entities.Any())
+        if (EntityDbContext.Items.Any())
         {
-            DbContext.Entities.RemoveRange(DbContext.Entities);
-            DbContext.SaveChanges();
+            EntityDbContext.Items.RemoveRange(EntityDbContext.Items);
+            EntityDbContext.SaveChanges();
         }
 
-        if (DbContext.Revisions.Any())
+        if (RevisionDbContext.Items.Any())
         {
-            DbContext.Revisions.RemoveRange(DbContext.Revisions);
-            DbContext.SaveChanges();
+            RevisionDbContext.Items.RemoveRange(RevisionDbContext.Items);
+            RevisionDbContext.SaveChanges();
         }
     }
 }

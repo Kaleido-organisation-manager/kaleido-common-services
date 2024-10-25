@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using Kaleido.Common.Services.Grpc.Configuration;
 using Kaleido.Common.Services.Grpc.Models;
 using Kaleido.Common.Services.Grpc.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -7,20 +8,20 @@ namespace Kaleido.Common.Services.Grpc.Repositories;
 
 public class BaseEntityRepository : BaseEntityRepository<BaseEntity>, IBaseEntityRepository
 {
-    public BaseEntityRepository(DbSet<BaseEntity> dbSet, DbContext context) : base(dbSet, context)
+    public BaseEntityRepository(DbSet<BaseEntity> dbSet, KaleidoDbContext<BaseEntity> context) : base(dbSet, context)
     {
     }
 }
 
 public class BaseEntityRepository<TEntity> : IBaseEntityRepository<TEntity>
-where TEntity : BaseEntity
+where TEntity : BaseEntity, new()
 {
     protected readonly DbSet<TEntity> DbSet;
-    protected readonly DbContext Context;
+    protected readonly KaleidoDbContext<TEntity> Context;
 
     public BaseEntityRepository(
         DbSet<TEntity> dbSet,
-        DbContext context
+        KaleidoDbContext<TEntity> context
     )
     {
         DbSet = dbSet;

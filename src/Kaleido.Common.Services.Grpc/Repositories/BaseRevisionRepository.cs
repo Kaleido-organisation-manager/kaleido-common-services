@@ -1,9 +1,9 @@
 using Kaleido.Common.Services.Grpc.Builders;
+using Kaleido.Common.Services.Grpc.Configuration;
 using Kaleido.Common.Services.Grpc.Constants;
 using Kaleido.Common.Services.Grpc.Models;
 using Kaleido.Common.Services.Grpc.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.Extensions.Logging;
 
 namespace Kaleido.Common.Services.Grpc.Repositories;
@@ -13,7 +13,7 @@ where TRevision : BaseRevisionEntity, new()
 {
     public BaseRevisionRepository(
     DbSet<TRevision> dbSet,
-    DbContext context,
+    KaleidoDbContext<TRevision> context,
     ILogger<TRevision> logger
 ) : base(dbSet, context, logger)
     { }
@@ -24,7 +24,7 @@ public class BaseRevisionRepository : BaseRevisionRepository<BaseRevisionEntity,
 
     public BaseRevisionRepository(
         DbSet<BaseRevisionEntity> dbSet,
-        DbContext context,
+        KaleidoDbContext<BaseRevisionEntity> context,
         ILogger<BaseRevisionRepository> logger
     ) : base(dbSet, context, logger)
     { }
@@ -35,12 +35,12 @@ where TRevisionEntity : BaseRevisionEntity, new()
 where TBuilder : BaseRevisionBuilder<TRevisionEntity>, new()
 {
     protected readonly DbSet<TRevisionEntity> DbSet;
-    protected readonly DbContext Context;
+    protected readonly KaleidoDbContext<TRevisionEntity> Context;
     protected readonly ILogger Logger;
 
     public BaseRevisionRepository(
         DbSet<TRevisionEntity> dbSet,
-        DbContext context,
+        KaleidoDbContext<TRevisionEntity> context,
         ILogger logger
     )
     {
