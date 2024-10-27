@@ -23,10 +23,4 @@ public class BaseEntity
     {
         return HashCode.Combine(Id);
     }
-
-    public virtual void OnModelCreating(EntityTypeBuilder<BaseRevisionEntity> entity)
-    {
-        entity.HasKey(e => e.Id);
-        entity.Property(e => e.Id).ValueGeneratedNever().HasColumnType("uuid");
-    }
 }

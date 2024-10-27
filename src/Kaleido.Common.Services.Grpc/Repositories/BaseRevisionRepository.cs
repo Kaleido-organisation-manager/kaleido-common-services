@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Kaleido.Common.Services.Grpc.Repositories;
 
-public class BaseRevisionRepository<TRevision> : BaseRevisionRepository<TRevision, BaseRevisionBuilder<TRevision>>
+public class BaseRevisionRepository<TRevision> : BaseRevisionRepository<TRevision, BaseRevisionBuilder<TRevision>>, IBaseRevisionRepository<TRevision>
 where TRevision : BaseRevisionEntity, new()
 {
     public BaseRevisionRepository(

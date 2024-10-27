@@ -23,6 +23,16 @@ where TEntity : BaseEntity, new()
     ) : base(entityRepository, baseRevisionRepository) { }
 }
 
+public class EntityLifeCycleHandler<TEntity, TRevision> : EntityLifeCycleHandler<TEntity, TRevision, BaseRevisionBuilder<TRevision>>, IEntityLifecycleHandler<TEntity, TRevision>
+where TEntity : BaseEntity, new()
+where TRevision : BaseRevisionEntity, new()
+{
+    public EntityLifeCycleHandler(
+    IBaseEntityRepository<TEntity> entityRepository,
+    IBaseRevisionRepository<TRevision> baseRevisionRepository
+) : base(entityRepository, baseRevisionRepository) { }
+}
+
 public class EntityLifeCycleHandler<TEntity, TRevision, TBuilder> : IEntityLifecycleHandler<TEntity, TRevision>
 where TEntity : BaseEntity, new()
 where TRevision : BaseRevisionEntity, new()

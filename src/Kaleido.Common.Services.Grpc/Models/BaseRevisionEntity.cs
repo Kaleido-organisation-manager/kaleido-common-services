@@ -12,16 +12,23 @@ public class BaseRevisionEntity : BaseEntity
     public RevisionAction Action { get; set; }
     public DateTime CreatedAt { get; set; }
 
-    public override void OnModelCreating(EntityTypeBuilder<BaseRevisionEntity> entity)
+    public override bool Equals(object? obj)
     {
-        base.OnModelCreating(entity);
+        if (!base.Equals(obj))
+        {
+            return false;
+        }
 
-        entity.Property(e => e.Key).IsRequired().HasColumnType("varchar(36)");
-        entity.Property(e => e.EntityId).IsRequired().HasColumnType("uuid");
-        entity.Property(e => e.CreatedAt).IsRequired().HasColumnType("timestamp with time zone");
-        entity.Property(e => e.Revision).IsRequired().HasColumnType("int");
-        entity.Property(e => e.Action).IsRequired().HasColumnType("varchar(8)");
+        var revision = (BaseRevisionEntity)obj;
 
-        entity.HasIndex(e => e.Key);
+        return revision.Key == Key && revision.EntityId == EntityId
+            && revision.Revision == Revision && revision.Action == Action
+            && revision.CreatedAt.Equals(CreatedAt);
+    }
+
+    public override int GetHashCode()
+    {
+        // return base.GetHashCode();
+        return HashCode.Combine(base.GetHashCode(), Key, EntityId, Revision, Action, CreatedAt);
     }
 }

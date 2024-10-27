@@ -1,6 +1,7 @@
 using Kaleido.Common.Services.Grpc.Configuration;
 using Kaleido.Common.Services.Grpc.Configuration.Extensions;
 using Kaleido.Common.Services.Grpc.Handlers;
+using Kaleido.Common.Services.Grpc.Handlers.Extensions;
 using Kaleido.Common.Services.Grpc.Handlers.Interfaces;
 using Kaleido.Common.Services.Grpc.Models;
 using Kaleido.Common.Services.Grpc.Repositories;
@@ -16,23 +17,19 @@ public class EntityLifeCycleHandlerFixture : IDisposable
 
     public KaleidoDbContext<BaseEntity> EntityDbContext { get; private set; }
     public KaleidoDbContext<BaseRevisionEntity> RevisionDbContext { get; private set; }
-    public IEntityLifecycleHandler Handler { get; private set; }
+    public IEntityLifecycleHandler<BaseEntity, BaseRevisionEntity> Handler { get; private set; }
 
     public EntityLifeCycleHandlerFixture()
     {
         var services = new ServiceCollection();
-        services.AddKaleidoInMemoryDbContext<BaseEntity, BaseRevisionEntity>("LifeCycleTests");
-
-        services.AddScoped<IBaseEntityRepository, BaseEntityRepository>();
-        services.AddScoped<IBaseRevisionRepository, BaseRevisionRepository>();
-        services.AddScoped<IEntityLifecycleHandler, EntityLifeCycleHandler>();
+        services.AddInMemoryLifeCycleHandler<BaseEntity, BaseRevisionEntity>("LifeCycleTests");
         services.AddLogging();
 
         _provider = services.BuildServiceProvider();
 
         EntityDbContext = _provider.GetRequiredService<KaleidoDbContext<BaseEntity>>();
         RevisionDbContext = _provider.GetRequiredService<KaleidoDbContext<BaseRevisionEntity>>();
-        Handler = _provider.GetRequiredService<IEntityLifecycleHandler>();
+        Handler = _provider.GetRequiredService<IEntityLifecycleHandler<BaseEntity, BaseRevisionEntity>>();
 
         EntityDbContext.Database.EnsureCreated();
         RevisionDbContext.Database.EnsureCreated();

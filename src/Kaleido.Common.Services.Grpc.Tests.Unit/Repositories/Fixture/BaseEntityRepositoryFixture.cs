@@ -2,6 +2,7 @@ using Kaleido.Common.Services.Grpc.Configuration;
 using Kaleido.Common.Services.Grpc.Configuration.Extensions;
 using Kaleido.Common.Services.Grpc.Models;
 using Kaleido.Common.Services.Grpc.Repositories;
+using Kaleido.Common.Services.Grpc.Repositories.Extensions;
 using Kaleido.Common.Services.Grpc.Repositories.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -12,19 +13,19 @@ public class BaseEntityRepositoryFixture : IDisposable
     private ServiceProvider _provider { get; set; }
 
     public KaleidoDbContext<BaseEntity> DbContext { get; private set; }
-    public IBaseEntityRepository Repository { get; private set; }
+    public IBaseEntityRepository<BaseEntity> Repository { get; private set; }
 
     public BaseEntityRepositoryFixture()
     {
         var services = new ServiceCollection();
         services.AddKaleidoInMemoryEntityDbContext<BaseEntity>("TestEntities");
-        services.AddScoped<IBaseEntityRepository, BaseEntityRepository>();
+        services.AddEntityRepository<BaseEntity>();
         services.AddLogging();
 
         _provider = services.BuildServiceProvider();
 
         DbContext = _provider.GetRequiredService<KaleidoDbContext<BaseEntity>>();
-        Repository = _provider.GetRequiredService<IBaseEntityRepository>();
+        Repository = _provider.GetRequiredService<IBaseEntityRepository<BaseEntity>>();
 
         DbContext.Database.EnsureCreated();
 
