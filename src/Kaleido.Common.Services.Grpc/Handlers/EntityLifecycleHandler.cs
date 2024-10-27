@@ -1,0 +1,312 @@
+using System.Linq.Expressions;
+using Kaleido.Common.Services.Grpc.Builders;
+using Kaleido.Common.Services.Grpc.Handlers.Interfaces;
+using Kaleido.Common.Services.Grpc.Models;
+using Kaleido.Common.Services.Grpc.Repositories.Interfaces;
+
+namespace Kaleido.Common.Services.Grpc.Handlers;
+
+public class EntityLifeCycleHandler : EntityLifeCycleHandler<BaseEntity, BaseRevisionEntity, BaseRevisionBuilder>, IEntityLifecycleHandler
+{
+    public EntityLifeCycleHandler(
+        IBaseEntityRepository entityRepository,
+        IBaseRevisionRepository baseRevisionRepository
+    ) : base(entityRepository, baseRevisionRepository) { }
+}
+
+public class EntityLifeCycleHandler<TEntity> : EntityLifeCycleHandler<TEntity, BaseRevisionEntity, BaseRevisionBuilder>, IEntityLifecycleHandler<TEntity>
+where TEntity : BaseEntity, new()
+{
+    public EntityLifeCycleHandler(
+        IBaseEntityRepository<TEntity> entityRepository,
+        IBaseRevisionRepository baseRevisionRepository
+    ) : base(entityRepository, baseRevisionRepository) { }
+}
+
+public class EntityLifeCycleHandler<TEntity, TRevision> : EntityLifeCycleHandler<TEntity, TRevision, BaseRevisionBuilder<TRevision>>, IEntityLifecycleHandler<TEntity, TRevision>
+where TEntity : BaseEntity, new()
+where TRevision : BaseRevisionEntity, new()
+{
+    public EntityLifeCycleHandler(
+    IBaseEntityRepository<TEntity> entityRepository,
+    IBaseRevisionRepository<TRevision> baseRevisionRepository
+) : base(entityRepository, baseRevisionRepository) { }
+}
+
+public class EntityLifeCycleHandler<TEntity, TRevision, TBuilder> : IEntityLifecycleHandler<TEntity, TRevision>
+where TEntity : BaseEntity, new()
+where TRevision : BaseRevisionEntity, new()
+where TBuilder : BaseRevisionBuilder<TRevision>, new()
+{
+    protected readonly IBaseEntityRepository<TEntity> EntityRepository;
+    protected readonly IBaseRevisionRepository<TRevision, TBuilder> RevisionRepository;
+
+    public EntityLifeCycleHandler(
+        IBaseEntityRepository<TEntity> entityRepository,
+        IBaseRevisionRepository<TRevision, TBuilder> revisionRepository
+    )
+    {
+        EntityRepository = entityRepository;
+        RevisionRepository = revisionRepository;
+    }
+
+    public async Task<EntityLifeCycleResult<TEntity, TRevision>> CreateAsync(TEntity entity, CancellationToken cancellationToken = default)
+    {
+        if (entity == null)
+        {
+            throw new ArgumentNullException(nameof(entity), "Entity cannot be null.");
+        }
+
+        var resultEntity = await EntityRepository.CreateAsync(entity, cancellationToken);
+        var resultRevision = await RevisionRepository.CreateAsync(resultEntity.Id, cancellationToken: cancellationToken);
+
+        return new EntityLifeCycleResult<TEntity, TRevision>
+        {
+            Entity = resultEntity,
+            Revision = resultRevision
+        };
+    }
+
+    public async Task<EntityLifeCycleResult<TEntity, TRevision>> DeleteAsync(Guid key, CancellationToken cancellationToken = default)
+    {
+        var revision = await RevisionRepository.DeleteAsync(key, cancellationToken: cancellationToken);
+        var entity = await EntityRepository.GetAsync(revision.EntityId, cancellationToken: cancellationToken);
+
+        if (entity == null)
+        {
+            throw new InvalidOperationException($"Failed to retrieve the entity associated with the provided revision key '{key}'. Ensure that the entity exists and is linked correctly in the database.");
+        }
+
+        return new EntityLifeCycleResult<TEntity, TRevision>
+        {
+            Entity = entity,
+            Revision = revision
+        };
+    }
+
+    public async Task<IEnumerable<EntityLifeCycleResult<TEntity, TRevision>>> FindAllAsync(Expression<Func<TEntity, bool>> predicate, Guid? key = null, CancellationToken cancellationToken = default)
+    {
+        IEnumerable<TRevision> revisions;
+
+        if (key.HasValue)
+        {
+            revisions = await RevisionRepository.GetAllAsync(key.Value, cancellationToken);
+        }
+        else
+        {
+            revisions = Enumerable.Empty<TRevision>();
+        }
+
+        var entityIds = revisions.Select(r => r.EntityId).Distinct().ToList();
+
+        var entities = key.HasValue
+            ? await EntityRepository.FindAllAsync(e => entityIds.Contains(e.Id) && predicate.Compile()(e), cancellationToken)
+            : await EntityRepository.FindAllAsync(predicate, cancellationToken);
+
+        var results = new List<EntityLifeCycleResult<TEntity, TRevision>>();
+
+        foreach (var entity in entities)
+        {
+            var entityRevisions = revisions.Where(r => r.EntityId == entity.Id);
+            entityRevisions ??= await RevisionRepository.GetAllByEntityIdAsync(entity.Id, cancellationToken: cancellationToken);
+
+            if (!entityRevisions.Any())
+            {
+                throw new InvalidOperationException($"Could not resolve any revisions for entity with id {entity.Id}");
+            }
+
+            results.AddRange(entityRevisions
+                .OrderByDescending(r => r.CreatedAt)
+                .Select(r => new EntityLifeCycleResult<TEntity, TRevision>
+                {
+                    Revision = r,
+                    Entity = entity
+                })
+            );
+        }
+
+        return results;
+    }
+
+    public async Task<IEnumerable<EntityLifeCycleResult<TEntity, TRevision>>> FindAsync(Expression<Func<TEntity, bool>> predicate, Guid? key = null, CancellationToken cancellationToken = default)
+    {
+        IEnumerable<TRevision> revisions;
+
+        if (key.HasValue)
+        {
+            revisions = await RevisionRepository.GetAllAsync(key.Value, cancellationToken);
+        }
+        else
+        {
+            revisions = Enumerable.Empty<TRevision>();
+        }
+
+        var entityIds = revisions.Select(r => r.EntityId).ToList();
+
+        var entity = key.HasValue
+            ? await EntityRepository.FindAsync(e => entityIds.Contains(e.Id) && predicate.Compile()(e), cancellationToken)
+            : await EntityRepository.FindAsync(predicate, cancellationToken);
+
+        if (entity == null)
+        {
+            return Enumerable.Empty<EntityLifeCycleResult<TEntity, TRevision>>();
+        }
+
+        var entityRevisions = key.HasValue
+            ? revisions.Where(r => r.EntityId == entity.Id)
+            : await RevisionRepository.GetAllByEntityIdAsync(entity.Id);
+
+        if (!entityRevisions.Any())
+        {
+            throw new InvalidOperationException($"Could not resolve any revisions for entity with id {entity.Id}");
+        }
+
+        return entityRevisions
+            .OrderByDescending(x => x.CreatedAt)
+            .Select(r => new EntityLifeCycleResult<TEntity, TRevision>
+            {
+                Revision = r,
+                Entity = entity
+            });
+    }
+
+    public async Task<IEnumerable<EntityLifeCycleResult<TEntity, TRevision>>> GetAllAsync(Guid? key = null, CancellationToken cancellationToken = default)
+    {
+        var revisions = Enumerable.Empty<TRevision>();
+        var entities = Enumerable.Empty<TEntity>();
+        if (key != null && key != Guid.Empty)
+        {
+            revisions = await RevisionRepository.GetAllAsync((Guid)key, cancellationToken);
+
+            var entityIds = revisions.Select(r => r.EntityId).ToList();
+            entities = await EntityRepository.FindAllAsync(e => entityIds.Contains(e.Id), cancellationToken);
+
+            return revisions.Select(r => new EntityLifeCycleResult<TEntity, TRevision>
+            {
+                Revision = r,
+                Entity = entities.First(e => e.Id == r.EntityId)
+            });
+        }
+
+        revisions = await RevisionRepository.GetAllAsync(cancellationToken: cancellationToken);
+        Console.WriteLine($"RevisionKeys: {string.Join(", ", revisions.Select(r => r.Key))}");
+
+        var revisionEntityIds = revisions.Select(r => r.EntityId).Distinct();
+        Console.WriteLine($"RevisionEntityIds: {string.Join(", ", revisionEntityIds)}");
+        entities = await EntityRepository.FindAllAsync(e => revisionEntityIds.Contains(e.Id), cancellationToken: cancellationToken);
+
+        var result = new List<EntityLifeCycleResult<TEntity, TRevision>>();
+
+        foreach (var revision in revisions)
+        {
+            var entity = entities.FirstOrDefault(e => e.Id == revision.EntityId);
+            if (entity == null)
+            {
+                throw new ArgumentNullException($"Could not resolve entity for latest revision {revision.Key}");
+            }
+            result.Add(new EntityLifeCycleResult<TEntity, TRevision>
+            {
+                Revision = revision,
+                Entity = entity
+            });
+        }
+
+        return result;
+    }
+
+    public async Task<EntityLifeCycleResult<TEntity, TRevision>?> GetAsync(Guid key, int? revision = null, CancellationToken cancellationToken = default)
+    {
+        var resultRevision = await RevisionRepository.GetAsync(key, revision, cancellationToken);
+
+        if (resultRevision == null)
+        {
+            return null;
+        }
+
+        var resultEntity = await EntityRepository.GetAsync(resultRevision.EntityId);
+
+        if (resultEntity == null)
+        {
+            throw new InvalidOperationException("Could not resolve the entity from the revision");
+        }
+
+        return new EntityLifeCycleResult<TEntity, TRevision>
+        {
+            Revision = resultRevision,
+            Entity = resultEntity
+        };
+    }
+
+    public async Task<EntityLifeCycleResult<TEntity, TRevision>?> GetHistoricAsync(Guid key, DateTime pointInTime, CancellationToken cancellationToken = default)
+    {
+        var revision = await RevisionRepository.GetHistoricAsync(key, pointInTime, cancellationToken);
+
+        if (revision == null)
+        {
+            return null;
+        }
+
+        var entity = await EntityRepository.GetAsync(revision.EntityId, cancellationToken);
+
+        if (entity == null)
+        {
+            throw new InvalidOperationException("Could not resolve the entity from the revision");
+        }
+
+        return new EntityLifeCycleResult<TEntity, TRevision>
+        {
+            Revision = revision,
+            Entity = entity
+        };
+    }
+
+    public async Task<EntityLifeCycleResult<TEntity, TRevision>> RestoreAsync(Guid key, CancellationToken cancellationToken = default)
+    {
+        var revision = await RevisionRepository.RestoreAsync(key, cancellationToken: cancellationToken);
+        var entity = await EntityRepository.GetAsync(revision.EntityId, cancellationToken);
+
+        if (entity == null)
+        {
+            throw new InvalidOperationException("Could not resolve the entity from the revision");
+        }
+
+        return new EntityLifeCycleResult<TEntity, TRevision>
+        {
+            Revision = revision,
+            Entity = entity
+        };
+    }
+
+    public async Task<EntityLifeCycleResult<TEntity, TRevision>> UpdateAsync(Guid key, TEntity entity, CancellationToken cancellationToken = default)
+    {
+        var latestRevision = await RevisionRepository.GetAsync(key, cancellationToken: cancellationToken);
+
+        if (latestRevision == null)
+        {
+            throw new InvalidOperationException("Cannot update an entity that does not yet exist in the database");
+        }
+
+        var storedEntity = await EntityRepository.GetAsync(latestRevision.EntityId, cancellationToken: cancellationToken);
+
+        if (storedEntity == null)
+        {
+            throw new InvalidOperationException("Could not resolve the entity from the latest revision");
+        }
+
+        if (storedEntity.Equals(entity))
+        {
+            throw new InvalidOperationException("No changes detected between the existing entity and the provided updated entity. Update operation requires at least one modified field.");
+        }
+
+        await RevisionRepository.ValidateUpdateAsync(key, cancellationToken: cancellationToken);
+
+        var updatedEntity = await EntityRepository.CreateAsync(entity, cancellationToken);
+        var updateRevision = await RevisionRepository.UpdateAsync(latestRevision.Key, updatedEntity.Id, cancellationToken: cancellationToken);
+
+        return new EntityLifeCycleResult<TEntity, TRevision>
+        {
+            Entity = updatedEntity,
+            Revision = updateRevision
+        };
+    }
+}
