@@ -34,6 +34,22 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    public static IServiceCollection AddKaleidoMigrationEntityDbContext<TEntity>(this IServiceCollection services, string connectionString, string assemblyName, IEnumerable<Action<EntityTypeBuilder<TEntity>>>? onCreatingModelMethods = null)
+    where TEntity : BaseEntity, new()
+    {
+        var modelCreatingMethods = new List<Action<EntityTypeBuilder<TEntity>>> { DefaultOnModelCreatingMethod.ForBaseEntity };
+        if (onCreatingModelMethods != null && onCreatingModelMethods.Any())
+        {
+            modelCreatingMethods.AddRange(onCreatingModelMethods);
+        }
+
+        services.AddDbContext<KaleidoDbContext<TEntity>>(options =>
+            options.UseNpgsql(connectionString, b => b.MigrationsAssembly(assemblyName)));
+        services.AddScoped(s => s.GetRequiredService<KaleidoDbContext<TEntity>>().Items);
+
+        return services;
+    }
+
     public static IServiceCollection AddKaleidoRevisionDbContext<TRevision>(this IServiceCollection services, string connectionString, IEnumerable<Action<EntityTypeBuilder<TRevision>>>? onCreatingModelMethods = null)
     where TRevision : BaseRevisionEntity, new()
     {
@@ -45,6 +61,22 @@ public static class ServiceCollectionExtensions
 
         services.AddDbContext<KaleidoDbContext<TRevision>>(options =>
             options.UseNpgsql(connectionString));
+        services.AddScoped(s => s.GetRequiredService<KaleidoDbContext<TRevision>>().Items);
+
+        return services;
+    }
+
+    public static IServiceCollection AddKaleidoMigrationRevisionDbContext<TRevision>(this IServiceCollection services, string connectionString, string assemblyName, IEnumerable<Action<EntityTypeBuilder<TRevision>>>? onCreatingModelMethods = null)
+    where TRevision : BaseRevisionEntity, new()
+    {
+        var modelCreatingMethods = new List<Action<EntityTypeBuilder<TRevision>>> { DefaultOnModelCreatingMethod.ForBaseEntity, DefaultOnModelCreatingMethod.ForBaseRevisionEntity };
+        if (onCreatingModelMethods != null && onCreatingModelMethods.Any())
+        {
+            modelCreatingMethods.AddRange(onCreatingModelMethods);
+        }
+
+        services.AddDbContext<KaleidoDbContext<TRevision>>(options =>
+            options.UseNpgsql(connectionString, b => b.MigrationsAssembly(assemblyName)));
         services.AddScoped(s => s.GetRequiredService<KaleidoDbContext<TRevision>>().Items);
 
         return services;
