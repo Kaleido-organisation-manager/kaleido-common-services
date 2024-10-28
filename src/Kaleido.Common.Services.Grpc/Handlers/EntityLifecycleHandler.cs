@@ -50,7 +50,7 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
         RevisionRepository = revisionRepository;
     }
 
-    public async Task<EntityLifeCycleResult<TEntity, TRevision>> CreateAsync(TEntity entity, CancellationToken cancellationToken = default)
+    public virtual async Task<EntityLifeCycleResult<TEntity, TRevision>> CreateAsync(TEntity entity, CancellationToken cancellationToken = default)
     {
         if (entity == null)
         {
@@ -67,7 +67,7 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
         };
     }
 
-    public async Task<EntityLifeCycleResult<TEntity, TRevision>> DeleteAsync(Guid key, CancellationToken cancellationToken = default)
+    public virtual async Task<EntityLifeCycleResult<TEntity, TRevision>> DeleteAsync(Guid key, CancellationToken cancellationToken = default)
     {
         var revision = await RevisionRepository.DeleteAsync(key, cancellationToken: cancellationToken);
         var entity = await EntityRepository.GetAsync(revision.EntityId, cancellationToken: cancellationToken);
@@ -84,7 +84,7 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
         };
     }
 
-    public async Task<IEnumerable<EntityLifeCycleResult<TEntity, TRevision>>> FindAllAsync(Expression<Func<TEntity, bool>> predicate, Guid? key = null, CancellationToken cancellationToken = default)
+    public virtual async Task<IEnumerable<EntityLifeCycleResult<TEntity, TRevision>>> FindAllAsync(Expression<Func<TEntity, bool>> predicate, Guid? key = null, CancellationToken cancellationToken = default)
     {
         IEnumerable<TRevision> revisions;
 
@@ -128,7 +128,7 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
         return results;
     }
 
-    public async Task<IEnumerable<EntityLifeCycleResult<TEntity, TRevision>>> FindAsync(Expression<Func<TEntity, bool>> predicate, Guid? key = null, CancellationToken cancellationToken = default)
+    public virtual async Task<IEnumerable<EntityLifeCycleResult<TEntity, TRevision>>> FindAsync(Expression<Func<TEntity, bool>> predicate, Guid? key = null, CancellationToken cancellationToken = default)
     {
         IEnumerable<TRevision> revisions;
 
@@ -170,7 +170,7 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
             });
     }
 
-    public async Task<IEnumerable<EntityLifeCycleResult<TEntity, TRevision>>> GetAllAsync(Guid? key = null, CancellationToken cancellationToken = default)
+    public virtual async Task<IEnumerable<EntityLifeCycleResult<TEntity, TRevision>>> GetAllAsync(Guid? key = null, CancellationToken cancellationToken = default)
     {
         var revisions = Enumerable.Empty<TRevision>();
         var entities = Enumerable.Empty<TEntity>();
@@ -214,7 +214,7 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
         return result;
     }
 
-    public async Task<EntityLifeCycleResult<TEntity, TRevision>?> GetAsync(Guid key, int? revision = null, CancellationToken cancellationToken = default)
+    public virtual async Task<EntityLifeCycleResult<TEntity, TRevision>?> GetAsync(Guid key, int? revision = null, CancellationToken cancellationToken = default)
     {
         var resultRevision = await RevisionRepository.GetAsync(key, revision, cancellationToken);
 
@@ -237,7 +237,7 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
         };
     }
 
-    public async Task<EntityLifeCycleResult<TEntity, TRevision>?> GetHistoricAsync(Guid key, DateTime pointInTime, CancellationToken cancellationToken = default)
+    public virtual async Task<EntityLifeCycleResult<TEntity, TRevision>?> GetHistoricAsync(Guid key, DateTime pointInTime, CancellationToken cancellationToken = default)
     {
         var revision = await RevisionRepository.GetHistoricAsync(key, pointInTime, cancellationToken);
 
@@ -260,7 +260,7 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
         };
     }
 
-    public async Task<EntityLifeCycleResult<TEntity, TRevision>> RestoreAsync(Guid key, CancellationToken cancellationToken = default)
+    public virtual async Task<EntityLifeCycleResult<TEntity, TRevision>> RestoreAsync(Guid key, CancellationToken cancellationToken = default)
     {
         var revision = await RevisionRepository.RestoreAsync(key, cancellationToken: cancellationToken);
         var entity = await EntityRepository.GetAsync(revision.EntityId, cancellationToken);
@@ -277,7 +277,7 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
         };
     }
 
-    public async Task<EntityLifeCycleResult<TEntity, TRevision>> UpdateAsync(Guid key, TEntity entity, CancellationToken cancellationToken = default)
+    public virtual async Task<EntityLifeCycleResult<TEntity, TRevision>> UpdateAsync(Guid key, TEntity entity, CancellationToken cancellationToken = default)
     {
         var latestRevision = await RevisionRepository.GetAsync(key, cancellationToken: cancellationToken);
 

@@ -28,7 +28,7 @@ where TEntity : BaseEntity, new()
         Context = context;
     }
 
-    public async Task<TEntity> CreateAsync(TEntity entity, CancellationToken cancellationToken = default)
+    public virtual async Task<TEntity> CreateAsync(TEntity entity, CancellationToken cancellationToken = default)
     {
         if (entity == null)
         {
@@ -40,22 +40,22 @@ where TEntity : BaseEntity, new()
         return storedEntity.Entity;
     }
 
-    public async Task<IEnumerable<TEntity>> FindAllAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
+    public virtual async Task<IEnumerable<TEntity>> FindAllAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
     {
         return await DbSet.Where(predicate).ToListAsync(cancellationToken);
     }
 
-    public async Task<TEntity?> FindAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
+    public virtual async Task<TEntity?> FindAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
     {
         return await DbSet.Where(predicate).FirstOrDefaultAsync(cancellationToken);
     }
 
-    public async Task<IEnumerable<TEntity>> GetAllAsync(CancellationToken cancellationToken = default)
+    public virtual async Task<IEnumerable<TEntity>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         return await DbSet.ToListAsync(cancellationToken);
     }
 
-    public async Task<TEntity?> GetAsync(Guid id, CancellationToken cancellationToken = default)
+    public virtual async Task<TEntity?> GetAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await DbSet.FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
     }
