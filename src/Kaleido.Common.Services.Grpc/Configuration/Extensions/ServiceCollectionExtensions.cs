@@ -27,6 +27,8 @@ public static class ServiceCollectionExtensions
             modelCreatingMethods.AddRange(onCreatingModelMethods);
         }
 
+
+        services.AddScoped<IEnumerable<Action<EntityTypeBuilder<TEntity>>>>(s => modelCreatingMethods.AsEnumerable());
         services.AddDbContext<KaleidoDbContext<TEntity>>(options =>
             options.UseNpgsql(connectionString));
         services.AddScoped(s => s.GetRequiredService<KaleidoDbContext<TEntity>>().Items);
@@ -43,6 +45,7 @@ public static class ServiceCollectionExtensions
             modelCreatingMethods.AddRange(onCreatingModelMethods);
         }
 
+        services.AddScoped<IEnumerable<Action<EntityTypeBuilder<TEntity>>>>(s => modelCreatingMethods.AsEnumerable());
         services.AddDbContext<KaleidoDbContext<TEntity>>(options =>
             options.UseNpgsql(connectionString, b => b.MigrationsAssembly(assemblyName)));
         services.AddScoped(s => s.GetRequiredService<KaleidoDbContext<TEntity>>().Items);
@@ -59,6 +62,7 @@ public static class ServiceCollectionExtensions
             modelCreatingMethods.AddRange(onCreatingModelMethods);
         }
 
+        services.AddScoped<IEnumerable<Action<EntityTypeBuilder<TRevision>>>>(s => modelCreatingMethods.AsEnumerable());
         services.AddDbContext<KaleidoDbContext<TRevision>>(options =>
             options.UseNpgsql(connectionString));
         services.AddScoped(s => s.GetRequiredService<KaleidoDbContext<TRevision>>().Items);
@@ -75,6 +79,7 @@ public static class ServiceCollectionExtensions
             modelCreatingMethods.AddRange(onCreatingModelMethods);
         }
 
+        services.AddScoped<IEnumerable<Action<EntityTypeBuilder<TRevision>>>>(s => modelCreatingMethods.AsEnumerable());
         services.AddDbContext<KaleidoDbContext<TRevision>>(options =>
             options.UseNpgsql(connectionString, b => b.MigrationsAssembly(assemblyName)));
         services.AddScoped(s => s.GetRequiredService<KaleidoDbContext<TRevision>>().Items);
@@ -100,6 +105,7 @@ public static class ServiceCollectionExtensions
             modelCreatingMethods.AddRange(onCreatingModelMethods);
         }
 
+        services.AddScoped<IEnumerable<Action<EntityTypeBuilder<TEntity>>>>(s => modelCreatingMethods.AsEnumerable());
         services.AddDbContext<KaleidoDbContext<TEntity>>(options =>
             options.UseInMemoryDatabase(databaseName));
         services.AddScoped(s => s.GetRequiredService<KaleidoDbContext<TEntity>>().Items);
@@ -116,6 +122,7 @@ public static class ServiceCollectionExtensions
             modelCreatingMethods.AddRange(onCreatingModelMethods);
         }
 
+        services.AddScoped<IEnumerable<Action<EntityTypeBuilder<TRevision>>>>(s => modelCreatingMethods.AsEnumerable());
         services.AddDbContext<KaleidoDbContext<TRevision>>(options =>
             options.UseInMemoryDatabase(databaseName));
         services.AddScoped(s => s.GetRequiredService<KaleidoDbContext<TRevision>>().Items);
