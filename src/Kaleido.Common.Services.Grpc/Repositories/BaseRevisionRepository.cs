@@ -4,7 +4,6 @@ using Kaleido.Common.Services.Grpc.Constants;
 using Kaleido.Common.Services.Grpc.Models;
 using Kaleido.Common.Services.Grpc.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace Kaleido.Common.Services.Grpc.Repositories;
 
@@ -13,9 +12,8 @@ where TRevision : BaseRevisionEntity, new()
 {
     public BaseRevisionRepository(
     DbSet<TRevision> dbSet,
-    KaleidoDbContext<TRevision> context,
-    ILogger<TRevision> logger
-) : base(dbSet, context, logger)
+    KaleidoDbContext<TRevision> context
+) : base(dbSet, context)
     { }
 }
 
@@ -24,9 +22,8 @@ public class BaseRevisionRepository : BaseRevisionRepository<BaseRevisionEntity,
 
     public BaseRevisionRepository(
         DbSet<BaseRevisionEntity> dbSet,
-        KaleidoDbContext<BaseRevisionEntity> context,
-        ILogger<BaseRevisionRepository> logger
-    ) : base(dbSet, context, logger)
+        KaleidoDbContext<BaseRevisionEntity> context
+    ) : base(dbSet, context)
     { }
 }
 
@@ -36,17 +33,14 @@ where TBuilder : BaseRevisionBuilder<TRevisionEntity>, new()
 {
     protected readonly DbSet<TRevisionEntity> DbSet;
     protected readonly KaleidoDbContext<TRevisionEntity> Context;
-    protected readonly ILogger Logger;
 
     public BaseRevisionRepository(
         DbSet<TRevisionEntity> dbSet,
-        KaleidoDbContext<TRevisionEntity> context,
-        ILogger logger
+        KaleidoDbContext<TRevisionEntity> context
     )
     {
         DbSet = dbSet;
         Context = context;
-        Logger = logger;
     }
 
     public virtual async Task<TRevisionEntity> CreateAsync(Guid entityId, TRevisionEntity? revision = null, CancellationToken cancellationToken = default)
