@@ -1,5 +1,6 @@
 using Grpc.Core;
 using Kaleido.Common.Services.Grpc.Constants;
+using Kaleido.Common.Services.Grpc.Exceptions;
 using Kaleido.Common.Services.Grpc.Models;
 using Kaleido.Common.Services.Grpc.Tests.Unit.Repositories.Fixture;
 using System;
@@ -154,7 +155,7 @@ public class BaseRevisionRepositoryTests : IClassFixture<BaseRevisionRepositoryF
     public async Task RestoreAsync_ThrowsArgumentNullException_WhenRevisionSetDoesNotExist()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+        await Assert.ThrowsAsync<RevisionNotFoundException>(async () =>
             await _fixture.Repository.RestoreAsync(Guid.NewGuid()));
     }
 
