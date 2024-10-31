@@ -1,27 +1,30 @@
 using System.Linq.Expressions;
 using Kaleido.Common.Services.Grpc.Configuration;
+using Kaleido.Common.Services.Grpc.Configuration.Interfaces;
 using Kaleido.Common.Services.Grpc.Models;
 using Kaleido.Common.Services.Grpc.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace Kaleido.Common.Services.Grpc.Repositories;
 
-public class BaseEntityRepository : BaseEntityRepository<BaseEntity>, IBaseEntityRepository
+public class BaseEntityRepository<EntityContext> : BaseEntityRepository<BaseEntity, EntityContext>, IBaseEntityRepository
+where EntityContext : DbContext, IKaleidoDbContext<BaseEntity>
 {
-    public BaseEntityRepository(DbSet<BaseEntity> dbSet, KaleidoDbContext<BaseEntity> context) : base(dbSet, context)
+    public BaseEntityRepository(DbSet<BaseEntity> dbSet, EntityContext context) : base(dbSet, context)
     {
     }
 }
 
-public class BaseEntityRepository<TEntity> : IBaseEntityRepository<TEntity>
-where TEntity : BaseEntity, new()
+public class BaseEntityRepository<TEntity, EntityContext> : IBaseEntityRepository<TEntity>
+where TEntity : BaseEntity
+where EntityContext : DbContext, IKaleidoDbContext<TEntity>
 {
     protected readonly DbSet<TEntity> DbSet;
-    protected readonly KaleidoDbContext<TEntity> Context;
+    protected readonly EntityContext Context;
 
     public BaseEntityRepository(
         DbSet<TEntity> dbSet,
-        KaleidoDbContext<TEntity> context
+        EntityContext context
     )
     {
         DbSet = dbSet;
