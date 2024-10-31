@@ -21,7 +21,7 @@ where TEntity : class, new()
         base.OnModelCreating(modelBuilder);
 
 
-        if (_onModelCreatingMethods.Any())
+        if (_onModelCreatingMethods != null && _onModelCreatingMethods.Any())
         {
             foreach (var onModelCreatingMethod in _onModelCreatingMethods)
             {
