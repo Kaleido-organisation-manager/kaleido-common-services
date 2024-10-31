@@ -1,6 +1,5 @@
 using System.Linq.Expressions;
 using Kaleido.Common.Services.Grpc.Builders;
-using Kaleido.Common.Services.Grpc.Configuration;
 using Kaleido.Common.Services.Grpc.Configuration.Interfaces;
 using Kaleido.Common.Services.Grpc.Constants;
 using Kaleido.Common.Services.Grpc.Exceptions;
@@ -132,7 +131,7 @@ where RevisionContext : DbContext, IKaleidoDbContext<TRevision>
 
         if (entityId != null && previousRevision.EntityId == entityId)
         {
-            throw new InvalidOperationException("Update revision for this entity already exists");
+            throw new NotModifiedException("Update revision for this entity already exists");
         }
 
         return previousRevision;
