@@ -3,6 +3,7 @@ using Kaleido.Common.Services.Grpc.Builders;
 using Kaleido.Common.Services.Grpc.Configuration;
 using Kaleido.Common.Services.Grpc.Configuration.Interfaces;
 using Kaleido.Common.Services.Grpc.Constants;
+using Kaleido.Common.Services.Grpc.Exceptions;
 using Kaleido.Common.Services.Grpc.Models;
 using Kaleido.Common.Services.Grpc.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -213,7 +214,7 @@ where RevisionContext : DbContext, IKaleidoDbContext<TRevision>
         var revision = await GetAsync(revisionKey, cancellationToken: cancellationToken);
         if (revision == null)
         {
-            throw new ArgumentNullException($"The specified revision with key {revisionKey} does not exist.");
+            throw new RevisionNotFoundException($"The specified revision with key {revisionKey} does not exist.");
         }
         return revision;
     }
