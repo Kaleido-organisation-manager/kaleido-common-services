@@ -1,4 +1,5 @@
 using Kaleido.Common.Services.Grpc.Configuration.Constants;
+using Kaleido.Common.Services.Grpc.Configuration.Interfaces;
 using Kaleido.Common.Services.Grpc.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -8,124 +9,91 @@ namespace Kaleido.Common.Services.Grpc.Configuration.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-
-    public static IServiceCollection AddKaleidoDbContext<TEntity, TRevision>(this IServiceCollection services, string connectionString, IEnumerable<Action<EntityTypeBuilder<TEntity>>>? onCreatingEntityMethods = null, IEnumerable<Action<EntityTypeBuilder<TRevision>>>? onCreatingRevisionMethods = null)
-    where TEntity : BaseEntity, new()
-    where TRevision : BaseRevisionEntity, new()
+    public static IServiceCollection AddKaleidoDbContext<TEntity, TRevision, EntityContext, RevisionContext>(this IServiceCollection services, string connectionString)
+    where TEntity : BaseEntity
+    where TRevision : BaseRevisionEntity
+    where EntityContext : DbContext, IKaleidoDbContext<TEntity>
+    where RevisionContext : DbContext, IKaleidoDbContext<TRevision>
     {
-        services.AddKaleidoEntityDbContext(connectionString, onCreatingEntityMethods);
-        services.AddKaleidoRevisionDbContext(connectionString, onCreatingRevisionMethods);
+        services.AddKaleidoEntityDbContext<TEntity, EntityContext>(connectionString);
+        services.AddKaleidoRevisionDbContext<TRevision, RevisionContext>(connectionString);
         return services;
     }
 
-    public static IServiceCollection AddKaleidoEntityDbContext<TEntity>(this IServiceCollection services, string connectionString, IEnumerable<Action<EntityTypeBuilder<TEntity>>>? onCreatingModelMethods = null)
-    where TEntity : BaseEntity, new()
+    public static IServiceCollection AddKaleidoEntityDbContext<TEntity, EntityContext>(this IServiceCollection services, string connectionString)
+    where TEntity : BaseEntity
+    where EntityContext : DbContext, IKaleidoDbContext<TEntity>
     {
-        var modelCreatingMethods = new List<Action<EntityTypeBuilder<TEntity>>> { DefaultOnModelCreatingMethod.ForBaseEntity };
-        if (onCreatingModelMethods != null && onCreatingModelMethods.Any())
-        {
-            modelCreatingMethods.AddRange(onCreatingModelMethods);
-        }
-
-
-        services.AddScoped<IEnumerable<Action<EntityTypeBuilder<TEntity>>>>(s => modelCreatingMethods.AsEnumerable());
-        services.AddDbContext<KaleidoDbContext<TEntity>>(options =>
+        services.AddDbContext<EntityContext>(options =>
             options.UseNpgsql(connectionString));
-        services.AddScoped(s => s.GetRequiredService<KaleidoDbContext<TEntity>>().Items);
+        services.AddScoped(s => s.GetRequiredService<EntityContext>().Items);
 
         return services;
     }
 
-    public static IServiceCollection AddKaleidoMigrationEntityDbContext<TEntity>(this IServiceCollection services, string connectionString, string assemblyName, IEnumerable<Action<EntityTypeBuilder<TEntity>>>? onCreatingModelMethods = null)
-    where TEntity : BaseEntity, new()
+    public static IServiceCollection AddKaleidoMigrationEntityDbContext<TEntity, EntityContext>(this IServiceCollection services, string connectionString, string assemblyName)
+    where TEntity : BaseEntity
+    where EntityContext : DbContext, IKaleidoDbContext<TEntity>
     {
-        var modelCreatingMethods = new List<Action<EntityTypeBuilder<TEntity>>> { DefaultOnModelCreatingMethod.ForBaseEntity };
-        if (onCreatingModelMethods != null && onCreatingModelMethods.Any())
-        {
-            modelCreatingMethods.AddRange(onCreatingModelMethods);
-        }
 
-        services.AddScoped<IEnumerable<Action<EntityTypeBuilder<TEntity>>>>(s => modelCreatingMethods.AsEnumerable());
-        services.AddDbContext<KaleidoDbContext<TEntity>>(options =>
+        services.AddDbContext<EntityContext>(options =>
             options.UseNpgsql(connectionString, b => b.MigrationsAssembly(assemblyName)));
-        services.AddScoped(s => s.GetRequiredService<KaleidoDbContext<TEntity>>().Items);
+        services.AddScoped(s => s.GetRequiredService<EntityContext>().Items);
 
         return services;
     }
 
-    public static IServiceCollection AddKaleidoRevisionDbContext<TRevision>(this IServiceCollection services, string connectionString, IEnumerable<Action<EntityTypeBuilder<TRevision>>>? onCreatingModelMethods = null)
-    where TRevision : BaseRevisionEntity, new()
+    public static IServiceCollection AddKaleidoRevisionDbContext<TRevision, RevisionContext>(this IServiceCollection services, string connectionString)
+    where TRevision : BaseRevisionEntity
+    where RevisionContext : DbContext, IKaleidoDbContext<TRevision>
     {
-        var modelCreatingMethods = new List<Action<EntityTypeBuilder<TRevision>>> { DefaultOnModelCreatingMethod.ForBaseEntity, DefaultOnModelCreatingMethod.ForBaseRevisionEntity };
-        if (onCreatingModelMethods != null && onCreatingModelMethods.Any())
-        {
-            modelCreatingMethods.AddRange(onCreatingModelMethods);
-        }
 
-        services.AddScoped<IEnumerable<Action<EntityTypeBuilder<TRevision>>>>(s => modelCreatingMethods.AsEnumerable());
-        services.AddDbContext<KaleidoDbContext<TRevision>>(options =>
+        services.AddDbContext<RevisionContext>(options =>
             options.UseNpgsql(connectionString));
-        services.AddScoped(s => s.GetRequiredService<KaleidoDbContext<TRevision>>().Items);
+        services.AddScoped(s => s.GetRequiredService<RevisionContext>().Items);
 
         return services;
     }
 
-    public static IServiceCollection AddKaleidoMigrationRevisionDbContext<TRevision>(this IServiceCollection services, string connectionString, string assemblyName, IEnumerable<Action<EntityTypeBuilder<TRevision>>>? onCreatingModelMethods = null)
+    public static IServiceCollection AddKaleidoMigrationRevisionDbContext<TRevision, RevisionContext>(this IServiceCollection services, string connectionString, string assemblyName)
     where TRevision : BaseRevisionEntity, new()
+    where RevisionContext : DbContext, IKaleidoDbContext<TRevision>
     {
-        var modelCreatingMethods = new List<Action<EntityTypeBuilder<TRevision>>> { DefaultOnModelCreatingMethod.ForBaseEntity, DefaultOnModelCreatingMethod.ForBaseRevisionEntity };
-        if (onCreatingModelMethods != null && onCreatingModelMethods.Any())
-        {
-            modelCreatingMethods.AddRange(onCreatingModelMethods);
-        }
-
-        services.AddScoped<IEnumerable<Action<EntityTypeBuilder<TRevision>>>>(s => modelCreatingMethods.AsEnumerable());
-        services.AddDbContext<KaleidoDbContext<TRevision>>(options =>
+        services.AddDbContext<RevisionContext>(options =>
             options.UseNpgsql(connectionString, b => b.MigrationsAssembly(assemblyName)));
-        services.AddScoped(s => s.GetRequiredService<KaleidoDbContext<TRevision>>().Items);
+        services.AddScoped(s => s.GetRequiredService<RevisionContext>().Items);
 
         return services;
     }
 
-    public static IServiceCollection AddKaleidoInMemoryDbContext<TEntity, TRevision>(this IServiceCollection services, string databaseName, IEnumerable<Action<EntityTypeBuilder<TEntity>>>? onCreatingEntityMethods = null, IEnumerable<Action<EntityTypeBuilder<TRevision>>>? onCreatingRevisionMethods = null)
-    where TEntity : BaseEntity, new()
-    where TRevision : BaseRevisionEntity, new()
+    public static IServiceCollection AddKaleidoInMemoryDbContext<TEntity, TRevision, EntityContext, RevisionContext>(this IServiceCollection services, string databaseName)
+    where TEntity : BaseEntity
+    where TRevision : BaseRevisionEntity
+    where EntityContext : DbContext, IKaleidoDbContext<TEntity>
+    where RevisionContext : DbContext, IKaleidoDbContext<TRevision>
     {
-        services.AddKaleidoInMemoryEntityDbContext(databaseName, onCreatingEntityMethods);
-        services.AddKaleidoInMemoryRevisionDbContext(databaseName, onCreatingRevisionMethods);
+        services.AddKaleidoInMemoryEntityDbContext<TEntity, EntityContext>(databaseName);
+        services.AddKaleidoInMemoryRevisionDbContext<TRevision, RevisionContext>(databaseName);
         return services;
     }
 
-    public static IServiceCollection AddKaleidoInMemoryEntityDbContext<TEntity>(this IServiceCollection services, string databaseName, IEnumerable<Action<EntityTypeBuilder<TEntity>>>? onCreatingModelMethods = null)
-    where TEntity : BaseEntity, new()
+    public static IServiceCollection AddKaleidoInMemoryEntityDbContext<TEntity, EntityContext>(this IServiceCollection services, string databaseName)
+    where TEntity : BaseEntity
+    where EntityContext : DbContext, IKaleidoDbContext<TEntity>
     {
-        var modelCreatingMethods = new List<Action<EntityTypeBuilder<TEntity>>> { DefaultOnModelCreatingMethod.ForBaseEntity };
-        if (onCreatingModelMethods != null && onCreatingModelMethods.Any())
-        {
-            modelCreatingMethods.AddRange(onCreatingModelMethods);
-        }
-
-        services.AddScoped<IEnumerable<Action<EntityTypeBuilder<TEntity>>>>(s => modelCreatingMethods.AsEnumerable());
-        services.AddDbContext<KaleidoDbContext<TEntity>>(options =>
+        services.AddDbContext<EntityContext>(options =>
             options.UseInMemoryDatabase(databaseName));
-        services.AddScoped(s => s.GetRequiredService<KaleidoDbContext<TEntity>>().Items);
-
+        services.AddScoped(s => s.GetRequiredService<EntityContext>().Items);
         return services;
     }
 
-    public static IServiceCollection AddKaleidoInMemoryRevisionDbContext<TRevision>(this IServiceCollection services, string databaseName, IEnumerable<Action<EntityTypeBuilder<TRevision>>>? onCreatingModelMethods = null)
-    where TRevision : BaseRevisionEntity, new()
+    public static IServiceCollection AddKaleidoInMemoryRevisionDbContext<TRevision, RevisionContext>(this IServiceCollection services, string databaseName)
+    where TRevision : BaseRevisionEntity
+    where RevisionContext : DbContext, IKaleidoDbContext<TRevision>
     {
-        var modelCreatingMethods = new List<Action<EntityTypeBuilder<TRevision>>> { DefaultOnModelCreatingMethod.ForBaseEntity, DefaultOnModelCreatingMethod.ForBaseRevisionEntity };
-        if (onCreatingModelMethods != null && onCreatingModelMethods.Any())
-        {
-            modelCreatingMethods.AddRange(onCreatingModelMethods);
-        }
-
-        services.AddScoped<IEnumerable<Action<EntityTypeBuilder<TRevision>>>>(s => modelCreatingMethods.AsEnumerable());
-        services.AddDbContext<KaleidoDbContext<TRevision>>(options =>
+        services.AddDbContext<RevisionContext>(options =>
             options.UseInMemoryDatabase(databaseName));
-        services.AddScoped(s => s.GetRequiredService<KaleidoDbContext<TRevision>>().Items);
+        services.AddScoped(s => s.GetRequiredService<RevisionContext>().Items);
 
         return services;
     }
