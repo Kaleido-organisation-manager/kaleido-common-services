@@ -21,5 +21,7 @@ where TRevision : BaseRevisionEntity
     public Task<IEnumerable<EntityLifeCycleResult<TEntity, TRevision>>> GetAllAsync(Guid? key = null, CancellationToken cancellationToken = default);
     public Task<EntityLifeCycleResult<TEntity, TRevision>?> GetHistoricAsync(Guid key, DateTime pointInTime, CancellationToken cancellationToken = default);
     public Task<IEnumerable<EntityLifeCycleResult<TEntity, TRevision>>> FindAllAsync(Expression<Func<TEntity, bool>> predicate, Guid? key = null, CancellationToken cancellationToken = default);
+    public Task<IEnumerable<EntityLifeCycleResult<TEntity, TRevision>>> FindAllAsync(Expression<Func<TEntity, bool>> predicate, Expression<Func<TRevision, bool>> revisionPredicate, Guid? key = null, CancellationToken cancellationToken = default);
     public Task<IEnumerable<EntityLifeCycleResult<TEntity, TRevision>>> FindAsync(Expression<Func<TEntity, bool>> predicate, Guid? key = null, CancellationToken cancellationToken = default);
+    public Task<IEnumerable<EntityLifeCycleResult<TEntity, TRevision>>> FindAsync(Expression<Func<TEntity, bool>> predicate, Expression<Func<TRevision, bool>> revisionPredicate, Guid? key = null, CancellationToken cancellationToken = default);
 }

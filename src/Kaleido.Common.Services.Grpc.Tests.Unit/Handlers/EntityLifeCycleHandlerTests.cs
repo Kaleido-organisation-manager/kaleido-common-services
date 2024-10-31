@@ -1,6 +1,8 @@
+using Kaleido.Common.Services.Grpc.Constants;
 using Kaleido.Common.Services.Grpc.Models;
 using Kaleido.Common.Services.Grpc.Tests.Unit.Handlers.Fixtures;
 using System;
+using System.Linq.Expressions;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
@@ -141,6 +143,23 @@ namespace Kaleido.Common.Services.Grpc.Tests.Unit.Handlers
         }
 
         [Fact]
+        public async Task GetAsync_ReturnsEntity_WhenEntityIsDeleted()
+        {
+            // Arrange
+            var entity = new BaseEntity() { Id = Guid.NewGuid() };
+            var createResult = await _fixture.Handler.CreateAsync(entity);
+            await _fixture.Handler.DeleteAsync(createResult.Key);
+
+            // Act
+            var result = await _fixture.Handler.GetAsync(createResult.Key);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(entity.Id, result.Entity.Id);
+            Assert.NotNull(result.Revision);
+        }
+
+        [Fact]
         public async Task FindAsync_ReturnsMatchingEntity()
         {
             // Arrange
@@ -180,6 +199,70 @@ namespace Kaleido.Common.Services.Grpc.Tests.Unit.Handlers
             // Assert
             Assert.NotEmpty(result);
             Assert.Equal(2, result.Count());
+        }
+
+        [Fact]
+        public async Task FindAllAsync_ReturnsMatchingEntities_WithRevisionFilter()
+        {
+            // Arrange
+            var entity1 = new BaseEntity { Id = Guid.NewGuid() };
+            var entity2 = new BaseEntity { Id = Guid.NewGuid() };
+            await _fixture.Handler.CreateAsync(entity1);
+            await _fixture.Handler.CreateAsync(entity2);
+
+            // Act
+            var result = await _fixture.Handler.FindAllAsync(e => e.Id == entity1.Id, r => r.Action == RevisionAction.Created);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Single(result);
+            Assert.Equal(entity1.Id, result.First().Entity.Id);
+        }
+
+        [Fact]
+        public async Task FindAllAsync_ReturnsEmpty_WithRevisionFilterWithNoMatch()
+        {
+            // Arrange
+            var entity1 = new BaseEntity { Id = Guid.NewGuid() };
+            var entity2 = new BaseEntity { Id = Guid.NewGuid() };
+            await _fixture.Handler.CreateAsync(entity1);
+            await _fixture.Handler.CreateAsync(entity2);
+
+            // Act
+            var result = await _fixture.Handler.FindAllAsync(e => e.Id == entity1.Id, r => r.Action == RevisionAction.Deleted);
+
+            // Assert
+            Assert.Empty(result);
+        }
+
+        [Fact]
+        public async Task FindAsync_ReturnsEntity_WithRevisionFilter()
+        {
+            // Arrange
+            var entity = new BaseEntity { Id = Guid.NewGuid() };
+            var createResult = await _fixture.Handler.CreateAsync(entity);
+
+            // Act
+            var result = await _fixture.Handler.FindAsync(e => e.Id == entity.Id, r => r.Action == RevisionAction.Created);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Single(result);
+            Assert.Equal(entity.Id, result.First().Entity.Id);
+        }
+
+        [Fact]
+        public async Task FindAsync_ReturnsEmpty_WithRevisionFilterWithNoMatch()
+        {
+            // Arrange
+            var entity = new BaseEntity { Id = Guid.NewGuid() };
+            var createResult = await _fixture.Handler.CreateAsync(entity);
+
+            // Act
+            var result = await _fixture.Handler.FindAsync(e => e.Id == entity.Id, r => r.Action == RevisionAction.Deleted);
+
+            // Assert
+            Assert.Empty(result);
         }
     }
 }
