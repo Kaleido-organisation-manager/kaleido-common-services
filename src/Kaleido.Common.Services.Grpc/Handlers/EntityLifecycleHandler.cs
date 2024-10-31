@@ -383,7 +383,7 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
 
         if (storedEntity.Equals(entity))
         {
-            throw new InvalidOperationException("No changes detected between the existing entity and the provided updated entity. Update operation requires at least one modified field.");
+            throw new NotModifiedException("No changes detected between the existing entity and the provided updated entity. Update operation requires at least one modified field.");
         }
 
         await RevisionRepository.ValidateUpdateAsync(key, cancellationToken: cancellationToken);

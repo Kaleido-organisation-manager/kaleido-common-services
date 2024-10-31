@@ -65,7 +65,7 @@ namespace Kaleido.Common.Services.Grpc.Tests.Unit.Handlers
         public async Task DeleteAsync_ThrowsArgumentNullException_WhenEntityDoesNotExist()
         {
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+            await Assert.ThrowsAsync<RevisionNotFoundException>(async () =>
                 await _fixture.Handler.DeleteAsync(Guid.NewGuid()));
         }
 

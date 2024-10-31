@@ -1,8 +1,8 @@
 using System.Linq.Expressions;
 using Kaleido.Common.Services.Grpc.Builders;
-using Kaleido.Common.Services.Grpc.Configuration;
 using Kaleido.Common.Services.Grpc.Configuration.Interfaces;
 using Kaleido.Common.Services.Grpc.Constants;
+using Kaleido.Common.Services.Grpc.Exceptions;
 using Kaleido.Common.Services.Grpc.Models;
 using Kaleido.Common.Services.Grpc.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -116,11 +116,6 @@ where RevisionContext : DbContext, IKaleidoDbContext<TRevision>
         var previousRevision = await ValidateUpdateAsync(revisionKey, entityId, cancellationToken);
         var revisionBuilder = InitializeRevisionBuilder(previousRevision);
 
-        if (previousRevision.Action == RevisionAction.Deleted)
-        {
-            throw new InvalidOperationException("Cannot update a deleted revision.");
-        }
-
         revisionBuilder = ConfigureRevisionBuilder(revisionBuilder, entityId, RevisionAction.Updated, previousRevision.Revision + 1, revision);
         return await SaveEntityAsync(revisionBuilder.Build(), cancellationToken);
     }
@@ -136,7 +131,7 @@ where RevisionContext : DbContext, IKaleidoDbContext<TRevision>
 
         if (entityId != null && previousRevision.EntityId == entityId)
         {
-            throw new InvalidOperationException("Update revision for this entity already exists");
+            throw new NotModifiedException("Update revision for this entity already exists");
         }
 
         return previousRevision;
@@ -213,7 +208,7 @@ where RevisionContext : DbContext, IKaleidoDbContext<TRevision>
         var revision = await GetAsync(revisionKey, cancellationToken: cancellationToken);
         if (revision == null)
         {
-            throw new ArgumentNullException($"The specified revision with key {revisionKey} does not exist.");
+            throw new RevisionNotFoundException($"The specified revision with key {revisionKey} does not exist.");
         }
         return revision;
     }
