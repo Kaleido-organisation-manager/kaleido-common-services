@@ -1,4 +1,5 @@
 using Kaleido.Common.Services.Grpc.Constants;
+using Kaleido.Common.Services.Grpc.Exceptions;
 using Kaleido.Common.Services.Grpc.Models;
 using Kaleido.Common.Services.Grpc.Tests.Unit.Handlers.Fixtures;
 using System;
@@ -106,13 +107,13 @@ namespace Kaleido.Common.Services.Grpc.Tests.Unit.Handlers
         }
 
         [Fact]
-        public async Task UpdateAsync_ThrowsInvalidOperationException_WhenEntityDoesNotExist()
+        public async Task UpdateAsync_ThrowsRevisionNotFoundException_WhenEntityDoesNotExist()
         {
             // Arrange
             var updatedEntity = new BaseEntity() { Id = Guid.NewGuid() };
 
             // Act & Assert
-            await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await Assert.ThrowsAsync<RevisionNotFoundException>(async () =>
                 await _fixture.Handler.UpdateAsync(Guid.NewGuid(), updatedEntity));
         }
 
