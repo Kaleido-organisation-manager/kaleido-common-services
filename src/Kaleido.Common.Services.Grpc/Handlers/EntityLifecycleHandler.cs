@@ -93,6 +93,10 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
         if (key.HasValue)
         {
             revisions = await RevisionRepository.GetAllAsync(key.Value, cancellationToken);
+            if (!revisions.Any())
+            {
+                throw new RevisionNotFoundException($"No revisions found with key {key}");
+            }
         }
         else
         {
@@ -100,11 +104,6 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
         }
 
         var entityIds = revisions.Select(r => r.EntityId).Distinct().ToList();
-
-        if (!entityIds.Any())
-        {
-            return new List<EntityLifeCycleResult<TEntity, TRevision>>();
-        }
 
         var entities = key.HasValue
             ? await EntityRepository.FindAllAsync(e => entityIds.Contains(e.Id) && predicate.Compile()(e), cancellationToken)
