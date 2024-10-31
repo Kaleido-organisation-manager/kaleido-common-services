@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Kaleido.Common.Services.Grpc.Builders;
 using Kaleido.Common.Services.Grpc.Models;
 
@@ -18,7 +19,9 @@ where TBuilder : BaseRevisionBuilder<T>, new()
     public Task<T> DeleteAsync(Guid revisionKey, Guid? entityId = null, T? revision = null, CancellationToken cancellationToken = default);
     public Task<T> RestoreAsync(Guid revisionKey, Guid? entityId = null, T? revision = null, CancellationToken cancellationToken = default);
     public Task<T?> GetAsync(Guid revisionKey, int? revision = null, CancellationToken cancellationToken = default);
+    public Task<T?> FindAsync(Expression<Func<T, bool>> predicate, Guid revisionKey, int? revision = null, CancellationToken cancellationToken = default);
     public Task<IEnumerable<T>> GetAllAsync(Guid? revisionKey = null, CancellationToken cancellationToken = default);
+    public Task<IEnumerable<T>> FindAllAsync(Expression<Func<T, bool>> predicate, Guid? revisionKey = null, CancellationToken cancellationToken = default);
     public Task<T?> GetHistoricAsync(Guid revisionKey, DateTime pointInTime, CancellationToken cancellationToken = default);
     public Task<IEnumerable<T>> GetAllByEntityIdAsync(Guid entityId, Guid? revisionKey = null, CancellationToken cancellationToken = default);
 }

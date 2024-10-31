@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Kaleido.Common.Services.Grpc.Builders;
 using Kaleido.Common.Services.Grpc.Configuration;
 using Kaleido.Common.Services.Grpc.Configuration.Interfaces;
@@ -149,6 +150,26 @@ where RevisionContext : DbContext, IKaleidoDbContext<TRevision>
             return revisions.Where(r => r.EntityId == entityId);
         }
         return await DbSet.Where(r => r.EntityId == entityId).ToListAsync(cancellationToken);
+    }
+
+    public virtual async Task<TRevision?> FindAsync(Expression<Func<TRevision, bool>> predicate, Guid revisionKey, int? revision = null, CancellationToken cancellationToken = default)
+    {
+        if (revisionKey == Guid.Empty)
+        {
+            throw new ArgumentNullException(nameof(revisionKey));
+        }
+
+        return await DbSet.Where(r => r.Key == revisionKey).Where(predicate).FirstOrDefaultAsync();
+    }
+
+    public virtual async Task<IEnumerable<TRevision>> FindAllAsync(Expression<Func<TRevision, bool>> predicate, Guid? revisionKey = null, CancellationToken cancellationToken = default)
+    {
+        IQueryable<TRevision> query = DbSet;
+        if (revisionKey != null && revisionKey != Guid.Empty)
+        {
+            query = query.Where(r => r.Key == revisionKey);
+        }
+        return await query.Where(predicate).ToListAsync();
     }
 
     private async Task<TRevision> SaveEntityAsync(TRevision entity, CancellationToken cancellationToken = default)
