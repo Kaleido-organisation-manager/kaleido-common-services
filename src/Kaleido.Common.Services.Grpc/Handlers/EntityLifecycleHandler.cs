@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using Kaleido.Common.Services.Grpc.Builders;
 using Kaleido.Common.Services.Grpc.Constants;
+using Kaleido.Common.Services.Grpc.Exceptions;
 using Kaleido.Common.Services.Grpc.Handlers.Interfaces;
 using Kaleido.Common.Services.Grpc.Models;
 using Kaleido.Common.Services.Grpc.Repositories.Interfaces;
@@ -75,7 +76,7 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
 
         if (entity == null)
         {
-            throw new InvalidOperationException($"Failed to retrieve the entity associated with the provided revision key '{key}'. Ensure that the entity exists and is linked correctly in the database.");
+            throw new EntityNotFoundException($"Failed to retrieve the entity associated with the provided revision key '{key}'. Ensure that the entity exists and is linked correctly in the database.");
         }
 
         return new EntityLifeCycleResult<TEntity, TRevision>
@@ -118,7 +119,7 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
 
             if (!entityRevisions.Any())
             {
-                throw new InvalidOperationException($"Could not resolve any revisions for entity with id {entity.Id}");
+                throw new RevisionNotFoundException($"Could not resolve any revisions for entity with id {entity.Id}");
             }
 
             results.AddRange(entityRevisions
@@ -158,7 +159,7 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
 
             if (!entityRevisions.Any())
             {
-                throw new InvalidOperationException($"Could not resolve any revisions for entity with id {entity.Id}");
+                throw new RevisionNotFoundException($"Could not resolve any revisions for entity with id {entity.Id}");
             }
 
             results.AddRange(entityRevisions
@@ -209,7 +210,7 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
 
         if (!entityRevisions.Any())
         {
-            throw new InvalidOperationException($"Could not resolve any revisions for entity with id {entity.Id}");
+            throw new RevisionNotFoundException($"Could not resolve any revisions for entity with id {entity.Id}");
         }
 
         return entityRevisions
@@ -247,7 +248,7 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
 
         if (!entityRevisions.Any())
         {
-            throw new InvalidOperationException($"Could not resolve any revisions for entity with id {entity.Id}");
+            throw new RevisionNotFoundException($"Could not resolve any revisions for entity with id {entity.Id}");
         }
 
         return entityRevisions
@@ -289,7 +290,7 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
             var entity = entities.FirstOrDefault(e => e.Id == revision.EntityId);
             if (entity == null)
             {
-                throw new ArgumentNullException($"Could not resolve entity for latest revision {revision.Key}");
+                throw new EntityNotFoundException($"Could not resolve entity for latest revision {revision.Key}");
             }
             result.Add(new EntityLifeCycleResult<TEntity, TRevision>
             {
@@ -314,7 +315,7 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
 
         if (resultEntity == null)
         {
-            throw new InvalidOperationException("Could not resolve the entity from the revision");
+            throw new EntityNotFoundException("Could not resolve the entity from the revision");
         }
 
         return new EntityLifeCycleResult<TEntity, TRevision>
@@ -337,7 +338,7 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
 
         if (entity == null)
         {
-            throw new InvalidOperationException("Could not resolve the entity from the revision");
+            throw new EntityNotFoundException("Could not resolve the entity from the revision");
         }
 
         return new EntityLifeCycleResult<TEntity, TRevision>
@@ -354,7 +355,7 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
 
         if (entity == null)
         {
-            throw new InvalidOperationException("Could not resolve the entity from the revision");
+            throw new EntityNotFoundException("Could not resolve the entity from the revision");
         }
 
         return new EntityLifeCycleResult<TEntity, TRevision>
@@ -370,14 +371,14 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
 
         if (latestRevision == null)
         {
-            throw new InvalidOperationException("Cannot update an entity that does not yet exist in the database");
+            throw new RevisionNotFoundException($"No revision found with key '{key}'");
         }
 
         var storedEntity = await EntityRepository.GetAsync(latestRevision.EntityId, cancellationToken: cancellationToken);
 
         if (storedEntity == null)
         {
-            throw new InvalidOperationException("Could not resolve the entity from the latest revision");
+            throw new EntityNotFoundException($"Entity with ID '{latestRevision.EntityId}' not found");
         }
 
         if (storedEntity.Equals(entity))
