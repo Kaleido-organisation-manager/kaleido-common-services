@@ -117,11 +117,6 @@ where RevisionContext : DbContext, IKaleidoDbContext<TRevision>
         var previousRevision = await ValidateUpdateAsync(revisionKey, entityId, cancellationToken);
         var revisionBuilder = InitializeRevisionBuilder(previousRevision);
 
-        if (previousRevision.Action == RevisionAction.Deleted)
-        {
-            throw new InvalidOperationException("Cannot update a deleted revision.");
-        }
-
         revisionBuilder = ConfigureRevisionBuilder(revisionBuilder, entityId, RevisionAction.Updated, previousRevision.Revision + 1, revision);
         return await SaveEntityAsync(revisionBuilder.Build(), cancellationToken);
     }
