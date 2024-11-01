@@ -109,33 +109,7 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
             ? await EntityRepository.FindAllAsync(e => entityIds.Contains(e.Id) && predicate.Compile()(e), cancellationToken)
             : await EntityRepository.FindAllAsync(predicate, cancellationToken);
 
-        var results = new List<EntityLifeCycleResult<TEntity, TRevision>>();
-
-        foreach (var entity in entities)
-        {
-            var entityRevisions = revisions.Where(r => r.EntityId == entity.Id);
-            if (!entityRevisions.Any())
-            {
-                var databaseRevisions = await RevisionRepository.GetAllByEntityIdAsync(entity.Id, cancellationToken: cancellationToken);
-                entityRevisions = databaseRevisions;
-            }
-
-            if (!entityRevisions.Any())
-            {
-                throw new RevisionNotFoundException($"Could not resolve any revisions for entity with id {entity.Id}");
-            }
-
-            results.AddRange(entityRevisions
-                .OrderByDescending(r => r.CreatedAt)
-                .Select(r => new EntityLifeCycleResult<TEntity, TRevision>
-                {
-                    Revision = r,
-                    Entity = entity
-                })
-            );
-        }
-
-        return results;
+        return await FormatFilterAllResult(key, entities, revisions, predicate, cancellationToken);
     }
 
     public virtual async Task<IEnumerable<EntityLifeCycleResult<TEntity, TRevision>>> FindAllAsync(Expression<Func<TEntity, bool>> predicate, Expression<Func<TRevision, bool>> revisionPredicate, Guid? key = null, CancellationToken cancellationToken = default)
@@ -153,16 +127,31 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
             ? await EntityRepository.FindAllAsync(e => entityIds.Contains(e.Id) && predicate.Compile()(e), cancellationToken)
             : await EntityRepository.FindAllAsync(predicate, cancellationToken);
 
+        return await FormatFilterAllResult(key, entities, revisions, predicate, cancellationToken);
+    }
+
+    private async Task<IEnumerable<EntityLifeCycleResult<TEntity, TRevision>>> FormatFilterAllResult(Guid? key, IEnumerable<TEntity> entities, IEnumerable<TRevision> revisions, Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
+    {
         var results = new List<EntityLifeCycleResult<TEntity, TRevision>>();
 
         foreach (var entity in entities)
         {
             var entityRevisions = revisions.Where(r => r.EntityId == entity.Id);
-            entityRevisions ??= await RevisionRepository.GetAllByEntityIdAsync(entity.Id, cancellationToken: cancellationToken);
-
             if (!entityRevisions.Any())
             {
-                throw new RevisionNotFoundException($"Could not resolve any revisions for entity with id {entity.Id}");
+                var databaseRevisions = await RevisionRepository.GetAllByEntityIdAsync(entity.Id, cancellationToken: cancellationToken);
+                if (databaseRevisions.Any())
+                {
+                    var latestRevision = await RevisionRepository.GetAsync(databaseRevisions.First().Key, cancellationToken: cancellationToken);
+                    entityRevisions =
+                        latestRevision != null && latestRevision.Action != RevisionAction.Deleted && latestRevision.EntityId == entity.Id
+                        ? new List<TRevision>() { latestRevision }
+                        : new List<TRevision>();
+                }
+                else
+                {
+                    entityRevisions = Enumerable.Empty<TRevision>();
+                }
             }
 
             results.AddRange(entityRevisions
@@ -175,7 +164,7 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
             );
         }
 
-        return results;
+        return key.HasValue ? results : results.GroupBy(e => e.Key).Select(g => g.OrderByDescending(e => e.Revision.Revision).First());
     }
 
     public virtual async Task<IEnumerable<EntityLifeCycleResult<TEntity, TRevision>>> FindAsync(Expression<Func<TEntity, bool>> predicate, Guid? key = null, CancellationToken cancellationToken = default)
