@@ -114,7 +114,11 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
         foreach (var entity in entities)
         {
             var entityRevisions = revisions.Where(r => r.EntityId == entity.Id);
-            entityRevisions ??= await RevisionRepository.GetAllByEntityIdAsync(entity.Id, cancellationToken: cancellationToken);
+            if (!entityRevisions.Any())
+            {
+                var databaseRevisions = await RevisionRepository.GetAllByEntityIdAsync(entity.Id, cancellationToken: cancellationToken);
+                entityRevisions = databaseRevisions;
+            }
 
             if (!entityRevisions.Any())
             {
