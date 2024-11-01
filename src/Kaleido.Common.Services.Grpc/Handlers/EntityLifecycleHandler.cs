@@ -86,16 +86,13 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
         };
     }
 
-    private async Task<IEnumerable<EntityLifeCycleResult<TEntity, TRevision>>> FindAllInternalAsync(Expression<Func<TEntity, bool>> predicate, Guid? key, Expression<Func<TRevision, bool>>? revisionPredicate, CancellationToken cancellationToken)
+    public virtual async Task<IEnumerable<EntityLifeCycleResult<TEntity, TRevision>>> FindAllAsync(Expression<Func<TEntity, bool>> predicate, Guid? key = null, CancellationToken cancellationToken = default)
     {
         IEnumerable<TRevision> revisions;
 
         if (key.HasValue)
         {
-            revisions = revisionPredicate != null
-                ? await RevisionRepository.FindAllAsync(revisionPredicate, key, cancellationToken)
-                : await RevisionRepository.GetAllAsync(key.Value, cancellationToken);
-
+            revisions = await RevisionRepository.GetAllAsync(key.Value, cancellationToken);
             if (!revisions.Any())
             {
                 throw new RevisionNotFoundException($"No revisions found with key {key}");
@@ -112,6 +109,29 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
             ? await EntityRepository.FindAllAsync(e => entityIds.Contains(e.Id) && predicate.Compile()(e), cancellationToken)
             : await EntityRepository.FindAllAsync(predicate, cancellationToken);
 
+        return await FormatFilterAllResult(key, entities, revisions, predicate, cancellationToken);
+    }
+
+    public virtual async Task<IEnumerable<EntityLifeCycleResult<TEntity, TRevision>>> FindAllAsync(Expression<Func<TEntity, bool>> predicate, Expression<Func<TRevision, bool>> revisionPredicate, Guid? key = null, CancellationToken cancellationToken = default)
+    {
+        var revisions = await RevisionRepository.FindAllAsync(revisionPredicate, key, cancellationToken);
+
+        var entityIds = revisions.Select(r => r.EntityId).Distinct().ToList();
+
+        if (!entityIds.Any())
+        {
+            return new List<EntityLifeCycleResult<TEntity, TRevision>>();
+        }
+
+        var entities = key.HasValue
+            ? await EntityRepository.FindAllAsync(e => entityIds.Contains(e.Id) && predicate.Compile()(e), cancellationToken)
+            : await EntityRepository.FindAllAsync(predicate, cancellationToken);
+
+        return await FormatFilterAllResult(key, entities, revisions, predicate, cancellationToken);
+    }
+
+    private async Task<IEnumerable<EntityLifeCycleResult<TEntity, TRevision>>> FormatFilterAllResult(Guid? key, IEnumerable<TEntity> entities, IEnumerable<TRevision> revisions, Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
+    {
         var results = new List<EntityLifeCycleResult<TEntity, TRevision>>();
 
         foreach (var entity in entities)
@@ -124,7 +144,7 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
                 {
                     var latestRevision = await RevisionRepository.GetAsync(databaseRevisions.First().Key, cancellationToken: cancellationToken);
                     entityRevisions =
-                        latestRevision != null && latestRevision.Action != RevisionAction.Deleted
+                        latestRevision != null && latestRevision.Action != RevisionAction.Deleted && latestRevision.EntityId == entity.Id
                         ? new List<TRevision>() { latestRevision }
                         : new List<TRevision>();
                 }
@@ -144,17 +164,7 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
             );
         }
 
-        return results.GroupBy(c => c.Key).Select(g => g.OrderByDescending(r => r.Revision).First());
-    }
-
-    public virtual async Task<IEnumerable<EntityLifeCycleResult<TEntity, TRevision>>> FindAllAsync(Expression<Func<TEntity, bool>> predicate, Guid? key = null, CancellationToken cancellationToken = default)
-    {
-        return await FindAllInternalAsync(predicate, key, null, cancellationToken);
-    }
-
-    public virtual async Task<IEnumerable<EntityLifeCycleResult<TEntity, TRevision>>> FindAllAsync(Expression<Func<TEntity, bool>> predicate, Expression<Func<TRevision, bool>> revisionPredicate, Guid? key = null, CancellationToken cancellationToken = default)
-    {
-        return await FindAllInternalAsync(predicate, key, revisionPredicate, cancellationToken);
+        return key.HasValue ? results : results.GroupBy(e => e.Key).Select(g => g.OrderByDescending(e => e.Revision.Revision).First());
     }
 
     public virtual async Task<IEnumerable<EntityLifeCycleResult<TEntity, TRevision>>> FindAsync(Expression<Func<TEntity, bool>> predicate, Guid? key = null, CancellationToken cancellationToken = default)

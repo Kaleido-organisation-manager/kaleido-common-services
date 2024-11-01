@@ -237,6 +237,22 @@ namespace Kaleido.Common.Services.Grpc.Tests.Unit.Handlers
         }
 
         [Fact]
+        public async Task FindAllAsync_WithNoKey_OnlyReturnsValuesIfTheLatestRevisionEntityMatches()
+        {
+            var entity1 = new BaseEntity { Id = Guid.NewGuid() };
+            var entity2 = new BaseEntity { Id = Guid.NewGuid() };
+            var entity1Result = await _fixture.Handler.CreateAsync(entity1);
+            await _fixture.Handler.UpdateAsync(entity1Result.Key, new BaseEntity { Id = Guid.NewGuid() });
+            await _fixture.Handler.CreateAsync(entity2);
+
+            // Act
+            var result = await _fixture.Handler.FindAllAsync(e => e.Id == entity1.Id);
+
+            // Assert
+            Assert.Empty(result);
+        }
+
+        [Fact]
         public async Task FindAsync_ReturnsEntity_WithRevisionFilter()
         {
             // Arrange
