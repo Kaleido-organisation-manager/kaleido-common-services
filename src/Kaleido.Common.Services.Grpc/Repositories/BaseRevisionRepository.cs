@@ -162,7 +162,6 @@ where RevisionContext : DbContext, IKaleidoDbContext<TRevision>
         IQueryable<TRevision> query = DbSet;
         if (revisionKey != null && revisionKey != Guid.Empty)
         {
-            Console.WriteLine($"Filtering on key {revisionKey}");
             query = query.Where(r => r.Key == revisionKey);
         }
         return await query.Where(predicate).ToListAsync();
