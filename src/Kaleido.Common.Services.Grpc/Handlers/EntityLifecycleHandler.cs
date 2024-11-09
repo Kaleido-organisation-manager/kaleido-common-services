@@ -52,7 +52,7 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
         RevisionRepository = revisionRepository;
     }
 
-    public virtual async Task<EntityLifeCycleResult<TEntity, TRevision>> CreateAsync(TEntity entity, CancellationToken cancellationToken = default)
+    public virtual async Task<EntityLifeCycleResult<TEntity, TRevision>> CreateAsync(TEntity entity, TRevision? revision = null, CancellationToken cancellationToken = default)
     {
         if (entity == null)
         {
@@ -60,7 +60,7 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
         }
 
         var resultEntity = await EntityRepository.CreateAsync(entity, cancellationToken);
-        var resultRevision = await RevisionRepository.CreateAsync(resultEntity.Id, cancellationToken: cancellationToken);
+        var resultRevision = await RevisionRepository.CreateAsync(resultEntity.Id, revision, cancellationToken: cancellationToken);
 
         return new EntityLifeCycleResult<TEntity, TRevision>
         {
@@ -69,10 +69,10 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
         };
     }
 
-    public virtual async Task<EntityLifeCycleResult<TEntity, TRevision>> DeleteAsync(Guid key, CancellationToken cancellationToken = default)
+    public virtual async Task<EntityLifeCycleResult<TEntity, TRevision>> DeleteAsync(Guid key, TRevision? revision = null, CancellationToken cancellationToken = default)
     {
-        var revision = await RevisionRepository.DeleteAsync(key, cancellationToken: cancellationToken);
-        var entity = await EntityRepository.GetAsync(revision.EntityId, cancellationToken: cancellationToken);
+        var resultRevision = await RevisionRepository.DeleteAsync(key, revision: revision, cancellationToken: cancellationToken);
+        var entity = await EntityRepository.GetAsync(resultRevision.EntityId, cancellationToken: cancellationToken);
 
         if (entity == null)
         {
@@ -82,7 +82,7 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
         return new EntityLifeCycleResult<TEntity, TRevision>
         {
             Entity = entity,
-            Revision = revision
+            Revision = resultRevision
         };
     }
 
@@ -319,6 +319,11 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
 
     public virtual async Task<EntityLifeCycleResult<TEntity, TRevision>?> GetHistoricAsync(Guid key, DateTime pointInTime, CancellationToken cancellationToken = default)
     {
+        if (key == Guid.Empty)
+        {
+            throw new ArgumentNullException(nameof(key), "Key cannot be empty.");
+        }
+
         var revision = await RevisionRepository.GetHistoricAsync(key, pointInTime, cancellationToken);
 
         if (revision == null)
@@ -340,10 +345,10 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
         };
     }
 
-    public virtual async Task<EntityLifeCycleResult<TEntity, TRevision>> RestoreAsync(Guid key, CancellationToken cancellationToken = default)
+    public virtual async Task<EntityLifeCycleResult<TEntity, TRevision>> RestoreAsync(Guid key, TRevision? revision = null, CancellationToken cancellationToken = default)
     {
-        var revision = await RevisionRepository.RestoreAsync(key, cancellationToken: cancellationToken);
-        var entity = await EntityRepository.GetAsync(revision.EntityId, cancellationToken);
+        var resultRevision = await RevisionRepository.RestoreAsync(key, revision: revision, cancellationToken: cancellationToken);
+        var entity = await EntityRepository.GetAsync(resultRevision.EntityId, cancellationToken);
 
         if (entity == null)
         {
@@ -352,12 +357,12 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
 
         return new EntityLifeCycleResult<TEntity, TRevision>
         {
-            Revision = revision,
+            Revision = resultRevision,
             Entity = entity
         };
     }
 
-    public virtual async Task<EntityLifeCycleResult<TEntity, TRevision>> UpdateAsync(Guid key, TEntity entity, CancellationToken cancellationToken = default)
+    public virtual async Task<EntityLifeCycleResult<TEntity, TRevision>> UpdateAsync(Guid key, TEntity entity, TRevision? revision = null, CancellationToken cancellationToken = default)
     {
         var latestRevision = await RevisionRepository.GetAsync(key, cancellationToken: cancellationToken);
 
@@ -378,10 +383,10 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
             throw new NotModifiedException("No changes detected between the existing entity and the provided updated entity. Update operation requires at least one modified field.");
         }
 
-        await RevisionRepository.ValidateUpdateAsync(key, cancellationToken: cancellationToken);
+        await RevisionRepository.ValidateUpdateAsync(key, revision?.EntityId ?? null, cancellationToken: cancellationToken);
 
         var updatedEntity = await EntityRepository.CreateAsync(entity, cancellationToken);
-        var updateRevision = await RevisionRepository.UpdateAsync(latestRevision.Key, updatedEntity.Id, cancellationToken: cancellationToken);
+        var updateRevision = await RevisionRepository.UpdateAsync(latestRevision.Key, updatedEntity.Id, revision, cancellationToken: cancellationToken);
 
         return new EntityLifeCycleResult<TEntity, TRevision>
         {

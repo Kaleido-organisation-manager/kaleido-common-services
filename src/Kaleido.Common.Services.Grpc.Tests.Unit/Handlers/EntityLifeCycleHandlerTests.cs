@@ -2,12 +2,6 @@ using Kaleido.Common.Services.Grpc.Constants;
 using Kaleido.Common.Services.Grpc.Exceptions;
 using Kaleido.Common.Services.Grpc.Models;
 using Kaleido.Common.Services.Grpc.Tests.Unit.Handlers.Fixtures;
-using System;
-using System.Linq.Expressions;
-using System.Security.Cryptography.X509Certificates;
-using System.Threading;
-using System.Threading.Tasks;
-using Xunit;
 
 namespace Kaleido.Common.Services.Grpc.Tests.Unit.Handlers
 {
@@ -280,6 +274,212 @@ namespace Kaleido.Common.Services.Grpc.Tests.Unit.Handlers
 
             // Assert
             Assert.Empty(result);
+        }
+
+        [Fact]
+        public async Task GetHistoricAsync_ReturnsEntity_AtPointInTime()
+        {
+            // Arrange
+            var entity = new BaseEntity { Id = Guid.NewGuid() };
+            var createResult = await _fixture.Handler.CreateAsync(entity);
+            var updateResult = await _fixture.Handler.UpdateAsync(createResult.Key, new BaseEntity { Id = Guid.NewGuid() });
+
+            // Act
+            var pointInTime = createResult.Revision.CreatedAt.AddMicroseconds((updateResult.Revision.CreatedAt - createResult.Revision.CreatedAt).TotalMicroseconds / 2);
+            var result = await _fixture.Handler.GetHistoricAsync(createResult.Key, pointInTime);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(entity.Id, result.Entity.Id);
+        }
+
+        [Fact]
+        public async Task GetHistoricAsync_ReturnsNull_WhenEntityDoesNotExist()
+        {
+            // Act
+            var result = await _fixture.Handler.GetHistoricAsync(Guid.NewGuid(), DateTime.UtcNow);
+
+            // Assert
+            Assert.Null(result);
+        }
+
+        [Fact]
+        public async Task GetHistoricAsync_ReturnsNull_WhenNoRevisionExistsAtPointInTime()
+        {
+            // Arrange
+            var entity = new BaseEntity { Id = Guid.NewGuid() };
+            var createResult = await _fixture.Handler.CreateAsync(entity);
+
+            // Act
+            var result = await _fixture.Handler.GetHistoricAsync(createResult.Key, createResult.Revision.CreatedAt.AddSeconds(-1));
+
+            // Assert
+            Assert.Null(result);
+        }
+
+        [Fact]
+        public async Task GetHistoricAsync_ReturnsLatestRevision_WhenPointInTimeIsAfterAllRevisions()
+        {
+            // Arrange
+            var entity = new BaseEntity { Id = Guid.NewGuid() };
+            var createResult = await _fixture.Handler.CreateAsync(entity);
+
+            // Act
+            var result = await _fixture.Handler.GetHistoricAsync(createResult.Key, createResult.Revision.CreatedAt.AddSeconds(1));
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(createResult.Revision.Id, result.Revision.Id);
+        }
+
+        [Fact]
+        public async Task GetHistoricAsync_ReturnsNull_WhenPointInTimeIsBeforeAllRevisions()
+        {
+            // Arrange
+            var entity = new BaseEntity { Id = Guid.NewGuid() };
+            var createResult = await _fixture.Handler.CreateAsync(entity);
+
+            // Act
+            var result = await _fixture.Handler.GetHistoricAsync(createResult.Key, createResult.Revision.CreatedAt.AddSeconds(-1));
+
+            // Assert
+            Assert.Null(result);
+        }
+
+        [Fact]
+        public async Task UpdateAsync_ThrowsRevisionNotFoundException_WhenEntityIsNotFound()
+        {
+            // Act & Assert
+            await Assert.ThrowsAsync<RevisionNotFoundException>(async () => await _fixture.Handler.UpdateAsync(Guid.NewGuid(), new BaseEntity { Id = Guid.NewGuid() }));
+        }
+
+        [Fact]
+        public async Task DeleteAsync_ThrowsRevisionNotFoundException_WhenEntityIsNotFound()
+        {
+            // Act & Assert
+            await Assert.ThrowsAsync<RevisionNotFoundException>(async () => await _fixture.Handler.DeleteAsync(Guid.NewGuid()));
+        }
+
+        [Fact]
+        public async Task RestoreAsync_ThrowsRevisionNotFoundException_WhenEntityIsNotFound()
+        {
+            // Act & Assert
+            await Assert.ThrowsAsync<RevisionNotFoundException>(async () => await _fixture.Handler.RestoreAsync(Guid.NewGuid()));
+        }
+
+        [Fact]
+        public async Task GetAsync_ReturnsNull_WhenEntityIsNotFound()
+        {
+            // Act
+            var result = await _fixture.Handler.GetAsync(Guid.NewGuid());
+
+            // Assert
+            Assert.Null(result);
+        }
+
+        [Fact]
+        public async Task GetHistoricAsync_ReturnsNull_WhenEntityIsNotFound()
+        {
+            // Act
+            var result = await _fixture.Handler.GetHistoricAsync(Guid.NewGuid(), DateTime.UtcNow);
+
+            // Assert
+            Assert.Null(result);
+        }
+
+        [Fact]
+        public async Task GetHistoricAsync_ThrowsArgumentNullException_WhenKeyIsEmpty()
+        {
+            // Act & Assert
+            await Assert.ThrowsAsync<ArgumentNullException>(async () => await _fixture.Handler.GetHistoricAsync(Guid.Empty, DateTime.UtcNow));
+        }
+
+        [Fact]
+        public async Task CreateAsync_WithPrefilledRevision_CreatesEntityAndRevision()
+        {
+            // Arrange
+            var entity = new BaseEntity() { Id = Guid.NewGuid() };
+            var revision = new BaseRevisionEntity() { Key = Guid.NewGuid() };
+
+            // Act
+            var result = await _fixture.Handler.CreateAsync(entity, revision);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(entity.Id, result.Entity.Id);
+            Assert.Equal(revision.Key, result.Revision.Key);
+        }
+
+        [Fact]
+        public async Task CreateAsync_WithNullRevision_CreatesEntityAndRevision()
+        {
+            // Arrange
+            var entity = new BaseEntity() { Id = Guid.NewGuid() };
+
+            // Act
+            var result = await _fixture.Handler.CreateAsync(entity);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(entity.Id, result.Entity.Id);
+            Assert.NotNull(result.Revision);
+        }
+
+        [Fact]
+        public async Task CreateAsync_WithNullEntity_ThrowsArgumentNullException()
+        {
+            // Act & Assert
+            await Assert.ThrowsAsync<ArgumentNullException>(async () => await _fixture.Handler.CreateAsync(null!));
+        }
+
+        [Fact]
+        public async Task DeleteAsync_WithCustomRevision_UsesProvidedRevision()
+        {
+            // Arrange
+            var entity = new BaseEntity() { Id = Guid.NewGuid() };
+            var revision = new BaseRevisionEntity() { Key = Guid.NewGuid() };
+            var createResult = await _fixture.Handler.CreateAsync(entity);
+
+            // Act
+            var result = await _fixture.Handler.DeleteAsync(createResult.Key, revision);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(entity.Id, result.Entity.Id);
+            Assert.Equal(revision.Key, result.Revision.Key);
+        }
+
+        [Fact]
+        public async Task UpdateAsync_WithCustomRevision_UsesProvidedRevision()
+        {
+            // Arrange
+            var entity = new BaseEntity() { Id = Guid.NewGuid() };
+            var revision = new BaseRevisionEntity() { Key = Guid.NewGuid() };
+            var createResult = await _fixture.Handler.CreateAsync(entity);
+
+            // Act
+            var result = await _fixture.Handler.UpdateAsync(createResult.Key, new BaseEntity { Id = Guid.NewGuid() }, revision);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(revision.Key, result.Revision.Key);
+        }
+
+        [Fact]
+        public async Task RestoreAsync_WithCustomRevision_UsesProvidedRevision()
+        {
+            // Arrange
+            var entity = new BaseEntity() { Id = Guid.NewGuid() };
+            var revision = new BaseRevisionEntity() { Key = Guid.NewGuid() };
+            var createResult = await _fixture.Handler.CreateAsync(entity);
+            await _fixture.Handler.DeleteAsync(createResult.Key);
+
+            // Act
+            var result = await _fixture.Handler.RestoreAsync(createResult.Key, revision);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(revision.Key, result.Revision.Key);
         }
     }
 }
