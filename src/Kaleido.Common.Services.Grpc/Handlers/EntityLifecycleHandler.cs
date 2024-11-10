@@ -144,7 +144,7 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
                 {
                     var latestRevision = await RevisionRepository.GetAsync(databaseRevisions.First().Key, cancellationToken: cancellationToken);
                     entityRevisions =
-                        latestRevision != null && latestRevision.Action != RevisionAction.Deleted && latestRevision.EntityId == entity.Id
+                        latestRevision != null && latestRevision.EntityId == entity.Id
                         ? new List<TRevision>() { latestRevision }
                         : new List<TRevision>();
                 }
@@ -173,7 +173,7 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
 
         if (key.HasValue)
         {
-            revisions = await RevisionRepository.FindAllAsync(r => r.Action != RevisionAction.Deleted, key.Value, cancellationToken);
+            revisions = await RevisionRepository.GetAllAsync(key.Value, cancellationToken);
         }
         else
         {
