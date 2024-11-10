@@ -6,4 +6,5 @@ public enum RevisionAction
     Updated = 2,
     Deleted = 3,
     Restored = 4,
+    Unmodified = 5
 }
