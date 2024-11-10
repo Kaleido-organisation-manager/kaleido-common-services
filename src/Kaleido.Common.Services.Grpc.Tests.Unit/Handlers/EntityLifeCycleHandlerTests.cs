@@ -231,22 +231,6 @@ namespace Kaleido.Common.Services.Grpc.Tests.Unit.Handlers
         }
 
         [Fact]
-        public async Task FindAllAsync_WithNoKey_OnlyReturnsValuesIfTheLatestRevisionEntityMatches()
-        {
-            var entity1 = new BaseEntity { Id = Guid.NewGuid() };
-            var entity2 = new BaseEntity { Id = Guid.NewGuid() };
-            var entity1Result = await _fixture.Handler.CreateAsync(entity1);
-            await _fixture.Handler.UpdateAsync(entity1Result.Key, new BaseEntity { Id = Guid.NewGuid() });
-            await _fixture.Handler.CreateAsync(entity2);
-
-            // Act
-            var result = await _fixture.Handler.FindAllAsync(e => e.Id == entity1.Id);
-
-            // Assert
-            Assert.Empty(result);
-        }
-
-        [Fact]
         public async Task FindAsync_ReturnsEntity_WithRevisionFilter()
         {
             // Arrange
@@ -480,6 +464,38 @@ namespace Kaleido.Common.Services.Grpc.Tests.Unit.Handlers
             // Assert
             Assert.NotNull(result);
             Assert.Equal(revision.Key, result.Revision.Key);
+        }
+
+        [Fact]
+        public async Task FindAllAsync_WhenEntityIsDeleted_ReturnsRevisions()
+        {
+            // Arrange
+            var entity = new BaseEntity() { Id = Guid.NewGuid() };
+            var createResult = await _fixture.Handler.CreateAsync(entity);
+            await _fixture.Handler.DeleteAsync(createResult.Key);
+
+            // Act
+            var result = await _fixture.Handler.FindAllAsync(e => e.Id == entity.Id);
+
+            // Assert
+            Assert.NotEmpty(result);
+            Assert.Equal(2, result.Count());
+        }
+
+        [Fact]
+        public async Task FindAllAsync_WhenEntityIsDeletedAndFilteredByRevision_ReturnsRevisions()
+        {
+            // Arrange
+            var entity = new BaseEntity() { Id = Guid.NewGuid() };
+            var createResult = await _fixture.Handler.CreateAsync(entity);
+            await _fixture.Handler.DeleteAsync(createResult.Key);
+
+            // Act
+            var result = await _fixture.Handler.FindAllAsync(e => e.Id == entity.Id, r => r.Action == RevisionAction.Deleted);
+
+            // Assert
+            Assert.NotEmpty(result);
+            Assert.Single(result);
         }
     }
 }
