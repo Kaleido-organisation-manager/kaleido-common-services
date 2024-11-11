@@ -497,6 +497,125 @@ namespace Kaleido.Common.Services.Grpc.Tests.Unit.Handlers
             Assert.NotEmpty(result);
             Assert.Single(result);
         }
+
+        [Fact]
+        public async Task UpdateAsync_SetsCreatedAtToUtcNow_WhenNotProvided()
+        {
+            // Arrange
+            var entity = new BaseEntity() { Id = Guid.NewGuid() };
+            var createResult = await _fixture.Handler.CreateAsync(entity);
+            var revision = new BaseRevisionEntity { Revision = 3 };
+
+            // Act
+            var result = await _fixture.Handler.UpdateAsync(createResult.Key, new BaseEntity { Id = Guid.NewGuid() }, revision);
+
+            // Assert
+            Assert.NotEqual(default, result.Revision.CreatedAt);
+        }
+
+        [Fact]
+        public async Task UpdateAsync_UsesProvidedCreatedAt_WhenNotDefault()
+        {
+            // Arrange
+            var entity = new BaseEntity() { Id = Guid.NewGuid() };
+            var createResult = await _fixture.Handler.CreateAsync(entity);
+            var revision = new BaseRevisionEntity { CreatedAt = DateTime.UtcNow.AddDays(-1) };
+
+            // Act
+            var result = await _fixture.Handler.UpdateAsync(createResult.Key, new BaseEntity { Id = Guid.NewGuid() }, revision);
+
+            // Assert
+            Assert.Equal(revision.CreatedAt, result.Revision.CreatedAt);
+        }
+
+        [Fact]
+        public async Task RestoreAsync_SetsCreatedAtToUtcNow_WhenNotProvided()
+        {
+            // Arrange
+            var entity = new BaseEntity() { Id = Guid.NewGuid() };
+            var createResult = await _fixture.Handler.CreateAsync(entity);
+            var revision = new BaseRevisionEntity { Revision = 3 };
+            await _fixture.Handler.DeleteAsync(createResult.Key);
+
+            // Act
+            var result = await _fixture.Handler.RestoreAsync(createResult.Key, revision);
+
+            // Assert
+            Assert.NotEqual(default, result.Revision.CreatedAt);
+        }
+
+        [Fact]
+        public async Task RestoreAsync_UsesProvidedCreatedAt_WhenNotDefault()
+        {
+            // Arrange
+            var entity = new BaseEntity() { Id = Guid.NewGuid() };
+            var createResult = await _fixture.Handler.CreateAsync(entity);
+            var revision = new BaseRevisionEntity { CreatedAt = DateTime.UtcNow.AddDays(-1) };
+            await _fixture.Handler.DeleteAsync(createResult.Key);
+
+            // Act
+            var result = await _fixture.Handler.RestoreAsync(createResult.Key, revision);
+
+            // Assert
+            Assert.Equal(revision.CreatedAt, result.Revision.CreatedAt);
+        }
+
+        [Fact]
+        public async Task DeleteAsync_SetsCreatedAtToUtcNow_WhenNotProvided()
+        {
+            // Arrange
+            var entity = new BaseEntity() { Id = Guid.NewGuid() };
+            var createResult = await _fixture.Handler.CreateAsync(entity);
+            var revision = new BaseRevisionEntity { Revision = 3 };
+
+            // Act
+            var result = await _fixture.Handler.DeleteAsync(createResult.Key, revision);
+            // Assert
+            Assert.NotEqual(default, result.Revision.CreatedAt);
+        }
+
+        [Fact]
+        public async Task DeleteAsync_UsesProvidedCreatedAt_WhenNotDefault()
+        {
+            // Arrange
+            var entity = new BaseEntity() { Id = Guid.NewGuid() };
+            var createResult = await _fixture.Handler.CreateAsync(entity);
+            var revision = new BaseRevisionEntity { CreatedAt = DateTime.UtcNow.AddDays(-1) };
+
+            // Act
+            var result = await _fixture.Handler.DeleteAsync(createResult.Key, revision);
+
+            // Assert
+            Assert.Equal(revision.CreatedAt, result.Revision.CreatedAt);
+        }
+
+        [Fact]
+        public async Task CreateAsync_SetsCreatedAtToUtcNow_WhenNotProvided()
+        {
+            // Arrange
+            var entity = new BaseEntity() { Id = Guid.NewGuid() };
+            var revision = new BaseRevisionEntity { Revision = 3 };
+
+            // Act
+            var result = await _fixture.Handler.CreateAsync(entity, revision);
+
+            // Assert
+            Assert.NotEqual(default, result.Revision.CreatedAt);
+        }
+
+        [Fact]
+        public async Task CreateAsync_UsesProvidedCreatedAt_WhenNotDefault()
+        {
+            // Arrange
+            var entity = new BaseEntity() { Id = Guid.NewGuid() };
+            var revision = new BaseRevisionEntity { CreatedAt = DateTime.UtcNow.AddDays(-1) };
+
+            // Act
+            var result = await _fixture.Handler.CreateAsync(entity, revision);
+
+            // Assert
+            Assert.Equal(revision.CreatedAt, result.Revision.CreatedAt);
+        }
     }
 }
 

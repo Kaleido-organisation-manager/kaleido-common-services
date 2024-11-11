@@ -50,8 +50,8 @@ where RevisionContext : DbContext, IKaleidoDbContext<TRevision>
 
     public virtual async Task<TRevision> CreateAsync(Guid entityId, TRevision? revision = null, CancellationToken cancellationToken = default)
     {
-        var revisionBuilder = InitializeRevisionBuilder(revision);
-        revisionBuilder = ConfigureRevisionBuilder(revisionBuilder, entityId, RevisionAction.Created, 1);
+        var revisionBuilder = InitializeRevisionBuilder();
+        revisionBuilder = ConfigureRevisionBuilder(revisionBuilder, entityId, RevisionAction.Created, 1, revision);
         return await SaveEntityAsync(revisionBuilder.Build(), cancellationToken);
     }
 
@@ -175,12 +175,13 @@ where RevisionContext : DbContext, IKaleidoDbContext<TRevision>
         return storedEntity.Entity;
     }
 
-    private TBuilder InitializeRevisionBuilder(TRevision? revision)
+    private TBuilder InitializeRevisionBuilder(TRevision? revision = null)
     {
         var revisionBuilder = new TBuilder();
         if (revision != null)
         {
             revisionBuilder = (TBuilder)revisionBuilder.FromRevision(revision);
+            revisionBuilder = (TBuilder)revisionBuilder.WithCreatedAt(DateTime.UtcNow);
         }
         if (revisionBuilder.Build().Key == Guid.Empty)
         {
@@ -196,7 +197,7 @@ where RevisionContext : DbContext, IKaleidoDbContext<TRevision>
             throw new ArgumentNullException(nameof(entityId), "An entity ID is required for creating or updating revisions");
         }
 
-        if (revisionEntity == null || revisionEntity.CreatedAt == default)
+        if ((revisionEntity == null || revisionEntity.CreatedAt == default) && revisionBuilder.Build().CreatedAt == default)
         {
             revisionBuilder = (TBuilder)revisionBuilder.WithCreatedAt(DateTime.UtcNow);
         }
