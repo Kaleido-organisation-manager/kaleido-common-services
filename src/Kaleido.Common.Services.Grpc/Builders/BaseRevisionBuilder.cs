@@ -16,21 +16,10 @@ where T : BaseRevisionEntity, new()
 
     public virtual BaseRevisionBuilder<T> FromRevision(T? revision)
     {
-        if (revision == null)
+        if (revision != null)
         {
-            return this;
+            _instance.FromRevision(revision);
         }
-
-        if (revision.Key != Guid.Empty)
-        {
-            _instance.Key = revision.Key;
-        }
-
-        if (revision.EntityId != Guid.Empty)
-        {
-            _instance.EntityId = revision.EntityId;
-        }
-        _instance.Revision = revision.Revision;
 
         return this;
     }
@@ -61,6 +50,12 @@ where T : BaseRevisionEntity, new()
     public BaseRevisionBuilder<T> WithEntityId(Guid entityId)
     {
         _instance.EntityId = entityId;
+        return this;
+    }
+
+    public BaseRevisionBuilder<T> WithCreatedAt(DateTime createdAt)
+    {
+        _instance.CreatedAt = createdAt;
         return this;
     }
 
