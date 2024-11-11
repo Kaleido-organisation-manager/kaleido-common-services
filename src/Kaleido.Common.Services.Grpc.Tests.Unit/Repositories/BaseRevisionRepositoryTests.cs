@@ -78,6 +78,59 @@ public class BaseRevisionRepositoryTests : IClassFixture<BaseRevisionRepositoryF
     }
 
     [Fact]
+    public async Task UpdateAsync_ThrowsNotModifiedException_WhenUpdatingSameEntityId()
+    {
+        // Arrange
+        var entityId = Guid.NewGuid();
+        var revision = await _fixture.Repository.CreateAsync(entityId);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotModifiedException>(async () =>
+            await _fixture.Repository.UpdateAsync(revision.Key, entityId, new BaseRevisionEntity()));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ThrowsArgumentNullException_WhenKeyIsEmpty()
+    {
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+            await _fixture.Repository.UpdateAsync(Guid.Empty, Guid.NewGuid(), new BaseRevisionEntity()));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_UsesPropertiesFromProvidedRevision()
+    {
+        // Arrange
+        var entityId = Guid.NewGuid();
+
+        // Act
+        var createResult = await _fixture.Repository.CreateAsync(Guid.NewGuid());
+        var revision = new BaseRevisionEntity { EntityId = entityId, Key = createResult.Key, CreatedAt = DateTime.UtcNow.AddDays(-1) };
+        var result = await _fixture.Repository.UpdateAsync(createResult.Key, entityId, revision);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(revision.EntityId, result.EntityId);
+        Assert.Equal(revision.Key, result.Key);
+        Assert.Equal(revision.CreatedAt, result.CreatedAt);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_SetsCreatedAtToUtcNow_WhenNotProvided()
+    {
+        // Arrange
+        var revision = new BaseRevisionEntity { Revision = 3 };
+
+        // Act
+        var createResult = await _fixture.Repository.CreateAsync(Guid.NewGuid());
+        var result = await _fixture.Repository.UpdateAsync(createResult.Key, Guid.NewGuid(), revision);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotEqual(default, result.CreatedAt);
+    }
+
+    [Fact]
     public async Task DeleteAsync_DeletesRevision()
     {
         // Arrange
@@ -286,7 +339,8 @@ public class BaseRevisionRepositoryTests : IClassFixture<BaseRevisionRepositoryF
         var entityId = Guid.NewGuid();
         var revision = await _fixture.Repository.CreateAsync(entityId);
         var pointInTime = DateTime.UtcNow.AddMinutes(1);
-        var updateResult = await _fixture.Repository.UpdateAsync(revision.Key, Guid.NewGuid());
+        var updateEntityId = Guid.NewGuid();
+        var updateResult = await _fixture.Repository.UpdateAsync(revision.Key, updateEntityId);
 
         // Act
         var result = await _fixture.Repository.GetHistoricAsync(revision.Key, pointInTime);
@@ -294,6 +348,7 @@ public class BaseRevisionRepositoryTests : IClassFixture<BaseRevisionRepositoryF
         // Assert
         Assert.NotNull(result);
         Assert.Equal(revision.Key, result.Key);
+        Assert.NotEqual(revision.EntityId, result.EntityId);
         Assert.Equal(updateResult.EntityId, result.EntityId);
     }
 

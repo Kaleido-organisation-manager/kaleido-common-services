@@ -196,6 +196,11 @@ where RevisionContext : DbContext, IKaleidoDbContext<TRevision>
             throw new ArgumentNullException(nameof(entityId), "An entity ID is required for creating or updating revisions");
         }
 
+        if (revisionEntity == null || revisionEntity.CreatedAt == default)
+        {
+            revisionBuilder = (TBuilder)revisionBuilder.WithCreatedAt(DateTime.UtcNow);
+        }
+
         return (TBuilder)revisionBuilder
             .FromRevision(revisionEntity)
             .WithAction(action)

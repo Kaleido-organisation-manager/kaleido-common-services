@@ -31,4 +31,16 @@ public class BaseRevisionEntity : BaseEntity
         // return base.GetHashCode();
         return HashCode.Combine(base.GetHashCode(), Key, EntityId, Revision, Action, CreatedAt);
     }
+
+    public BaseRevisionEntity FromRevision(BaseRevisionEntity revision)
+    {
+        Key = revision.Key != default ? revision.Key : Key;
+        EntityId = revision.EntityId != default ? revision.EntityId : EntityId;
+        Revision = revision.Revision != default ? revision.Revision : Revision;
+        Action = revision.Action != default ? revision.Action : Action;
+        CreatedAt = revision.CreatedAt != default ? revision.CreatedAt : CreatedAt;
+        Id = revision.Id != default ? revision.Id : Id;
+
+        return this;
+    }
 }
