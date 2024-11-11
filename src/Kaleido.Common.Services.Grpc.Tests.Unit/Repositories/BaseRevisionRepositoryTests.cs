@@ -348,6 +348,7 @@ public class BaseRevisionRepositoryTests : IClassFixture<BaseRevisionRepositoryF
         // Assert
         Assert.NotNull(result);
         Assert.Equal(revision.Key, result.Key);
+        Assert.NotEqual(revision.CreatedAt, result.CreatedAt);
         Assert.NotEqual(revision.EntityId, result.EntityId);
         Assert.Equal(updateResult.EntityId, result.EntityId);
     }
