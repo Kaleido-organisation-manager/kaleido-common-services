@@ -616,6 +616,103 @@ namespace Kaleido.Common.Services.Grpc.Tests.Unit.Handlers
             // Assert
             Assert.Equal(revision.CreatedAt, result.Revision.CreatedAt);
         }
+
+        [Fact]
+        public async Task Create_ShouldSetRevisionStatusToActive()
+        {
+            // Arrange
+            var entity = new BaseEntity { Id = Guid.NewGuid() };
+
+            // Act
+            var result = await _fixture.Handler.CreateAsync(entity);
+
+            // Assert
+            Assert.Equal(RevisionStatus.Active, result.Revision.Status);
+        }
+
+        [Fact]
+        public async Task Update_ShouldArchivePreviousAndSetNewToActive()
+        {
+            // Arrange
+            var entity = new BaseEntity { Id = Guid.NewGuid() };
+            var firstRevision = await _fixture.Handler.CreateAsync(entity);
+
+            // Act
+            var updatedRevision = await _fixture.Handler.UpdateAsync(firstRevision.Key, new BaseEntity { Id = Guid.NewGuid() });
+            var previousRevision = await _fixture.Handler.GetAsync(firstRevision.Key, 1);
+
+            // Assert
+            Assert.Equal(RevisionStatus.Active, updatedRevision.Revision.Status);
+            Assert.NotNull(previousRevision);
+            Assert.Equal(RevisionStatus.Archived, previousRevision.Revision.Status);
+        }
+
+        [Fact]
+        public async Task Delete_ShouldArchivePreviousAndSetNewToActive()
+        {
+            // Arrange
+            var entity = new BaseEntity { Id = Guid.NewGuid() };
+            var firstRevision = await _fixture.Handler.CreateAsync(entity);
+
+            // Act
+            var deletedRevision = await _fixture.Handler.DeleteAsync(firstRevision.Key);
+            var previousRevision = await _fixture.Handler.GetAsync(firstRevision.Key, 1);
+
+            // Assert
+            Assert.Equal(RevisionStatus.Active, deletedRevision.Revision.Status);
+            Assert.NotNull(previousRevision);
+            Assert.Equal(RevisionStatus.Archived, previousRevision.Revision.Status);
+        }
+
+        [Fact]
+        public async Task Restore_ShouldArchivePreviousAndSetNewToActive()
+        {
+            // Arrange
+            var entity = new BaseEntity { Id = Guid.NewGuid() };
+            var firstRevision = await _fixture.Handler.CreateAsync(entity);
+            var deletedRevision = await _fixture.Handler.DeleteAsync(firstRevision.Key);
+
+            // Act
+            var restoredRevision = await _fixture.Handler.RestoreAsync(deletedRevision.Key);
+            var previousRevision = await _fixture.Handler.GetAsync(deletedRevision.Key, 1);
+
+            // Assert
+            Assert.Equal(RevisionStatus.Active, restoredRevision.Revision.Status);
+            Assert.NotNull(previousRevision);
+            Assert.Equal(RevisionStatus.Archived, previousRevision.Revision.Status);
+        }
+
+        [Fact]
+        public async Task GetAllByStatusAsync_WithActiveStatus_ShouldReturnOnlyActiveRevision()
+        {
+            // Arrange
+            var entity = new BaseEntity { Id = Guid.NewGuid() };
+            var firstRevision = await _fixture.Handler.CreateAsync(entity);
+            var updatedRevision = await _fixture.Handler.UpdateAsync(firstRevision.Key, new BaseEntity { Id = Guid.NewGuid() });
+
+            // Act
+            var activeRevision = await _fixture.Handler.GetAllByStatusAsync(RevisionStatus.Active);
+
+            // Assert
+            Assert.Single(activeRevision);
+            Assert.Equal(updatedRevision.Key, activeRevision.First().Key);
+            Assert.Equal(RevisionStatus.Active, activeRevision.First().Revision.Status);
+        }
+
+        [Fact]
+        public async Task GetAllByStatusAsync_WithActiveStatusAndKey_ShouldReturnOnlyActiveRevision()
+        {
+            // Arrange
+            var entity = new BaseEntity { Id = Guid.NewGuid() };
+            var firstRevision = await _fixture.Handler.CreateAsync(entity);
+            await _fixture.Handler.UpdateAsync(firstRevision.Key, new BaseEntity { Id = Guid.NewGuid() });
+
+            // Act
+            var activeRevisions = await _fixture.Handler.GetAllByStatusAsync(RevisionStatus.Active, firstRevision.Key);
+
+            // Assert
+            Assert.Single(activeRevisions);
+        }
     }
 }
 

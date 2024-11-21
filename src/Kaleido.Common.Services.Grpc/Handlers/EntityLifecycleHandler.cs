@@ -122,7 +122,7 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
 
         }
 
-        return FormatFilterAllResult(key, entities, revisions, predicate, cancellationToken);
+        return FormatFilterAllResult(entities, revisions);
     }
 
     public virtual async Task<IEnumerable<EntityLifeCycleResult<TEntity, TRevision>>> FindAllAsync(Expression<Func<TEntity, bool>> predicate, Expression<Func<TRevision, bool>> revisionPredicate, Guid? key = null, CancellationToken cancellationToken = default)
@@ -140,10 +140,19 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
             ? await EntityRepository.FindAllAsync(e => entityIds.Contains(e.Id) && predicate.Compile()(e), cancellationToken)
             : await EntityRepository.FindAllAsync(predicate, cancellationToken);
 
-        return FormatFilterAllResult(key, entities, revisions, predicate, cancellationToken);
+        return FormatFilterAllResult(entities, revisions);
     }
 
-    private IEnumerable<EntityLifeCycleResult<TEntity, TRevision>> FormatFilterAllResult(Guid? key, IEnumerable<TEntity> entities, IEnumerable<TRevision> revisions, Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
+    public virtual async Task<IEnumerable<EntityLifeCycleResult<TEntity, TRevision>>> GetAllByStatusAsync(RevisionStatus status, Guid? key = null, CancellationToken cancellationToken = default)
+    {
+        var revisions = await RevisionRepository.GetAllByStatusAsync(status, key, cancellationToken);
+        var entities = key.HasValue
+            ? await EntityRepository.FindAllAsync(e => revisions.Select(r => r.EntityId).Contains(e.Id), cancellationToken)
+            : await EntityRepository.FindAllAsync(e => revisions.Select(r => r.EntityId).Contains(e.Id), cancellationToken);
+        return FormatFilterAllResult(entities, revisions);
+    }
+
+    private IEnumerable<EntityLifeCycleResult<TEntity, TRevision>> FormatFilterAllResult(IEnumerable<TEntity> entities, IEnumerable<TRevision> revisions)
     {
         var results = new List<EntityLifeCycleResult<TEntity, TRevision>>();
 
