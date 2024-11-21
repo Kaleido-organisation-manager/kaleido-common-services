@@ -469,4 +469,168 @@ public class BaseRevisionRepositoryTests : IClassFixture<BaseRevisionRepositoryF
         // Assert
         Assert.Null(result);
     }
+
+    [Fact]
+    public async Task CreateAsync_ShouldSetStatusToActive()
+    {
+        // Arrange
+        var entityId = Guid.NewGuid();
+        var revision = new BaseRevisionEntity { EntityId = entityId };
+
+        // Act
+        var result = await _fixture.Repository.CreateAsync(entityId, revision);
+
+        // Assert
+        Assert.Equal(RevisionStatus.Active, result.Status);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ShouldArchivePreviousRevision()
+    {
+        // Arrange
+        var entityId = Guid.NewGuid();
+        var firstRevision = await _fixture.Repository.CreateAsync(entityId);
+
+        // Act
+        var updatedRevision = await _fixture.Repository.UpdateAsync(firstRevision.Key, Guid.NewGuid());
+        var archivedRevision = await _fixture.Repository.GetAsync(firstRevision.Key, 1);
+
+        // Assert
+        Assert.Equal(RevisionStatus.Active, updatedRevision.Status);
+        Assert.NotNull(archivedRevision);
+        Assert.Equal(RevisionStatus.Archived, archivedRevision.Status);
+    }
+
+    [Fact]
+    public async Task GetAllByStatusAsync_StatusActive_ShouldReturnOnlyActiveRevisions()
+    {
+        // Arrange
+        var entityId = Guid.NewGuid();
+        var firstRevision = await _fixture.Repository.CreateAsync(entityId);
+        var updatedRevision = await _fixture.Repository.UpdateAsync(firstRevision.Key, Guid.NewGuid());
+
+        // Act
+        var activeRevisions = await _fixture.Repository.GetAllByStatusAsync(RevisionStatus.Active);
+
+        // Assert
+        Assert.NotEmpty(activeRevisions);
+        Assert.Single(activeRevisions);
+        Assert.Equal(updatedRevision.Id, activeRevisions.First().Id);
+        Assert.Equal(RevisionStatus.Active, activeRevisions.First().Status);
+    }
+
+    [Fact]
+    public async Task GetAllByStatusAsync_StatusArchived_ShouldReturnOnlyArchivedRevisions()
+    {
+        // Arrange
+        var entityId = Guid.NewGuid();
+        var firstRevision = await _fixture.Repository.CreateAsync(entityId);
+        var updatedRevision = await _fixture.Repository.UpdateAsync(firstRevision.Key, Guid.NewGuid());
+
+        // Act
+        var archivedRevisions = await _fixture.Repository.GetAllByStatusAsync(RevisionStatus.Archived);
+
+        // Assert
+        Assert.NotEmpty(archivedRevisions);
+        Assert.Single(archivedRevisions);
+        Assert.Equal(firstRevision.Id, archivedRevisions.First().Id);
+        Assert.Equal(RevisionStatus.Archived, archivedRevisions.First().Status);
+    }
+
+    [Fact]
+    public async Task GetAllByStatusAsync_ShouldReturnOnlyRevisionsWithSpecifiedStatus()
+    {
+        // Arrange
+        var entityId = Guid.NewGuid();
+        var firstRevision = await _fixture.Repository.CreateAsync(entityId);
+        await _fixture.Repository.UpdateAsync(firstRevision.Key, Guid.NewGuid());  // This will archive the first revision
+
+        // Act
+        var activeRevisions = await _fixture.Repository.GetAllByStatusAsync(RevisionStatus.Active);
+        var archivedRevisions = await _fixture.Repository.GetAllByStatusAsync(RevisionStatus.Archived);
+
+        // Assert
+        Assert.NotEmpty(activeRevisions);
+        Assert.Single(activeRevisions);
+        Assert.Equal(RevisionStatus.Active, activeRevisions.First().Status);
+
+        Assert.NotEmpty(archivedRevisions);
+        Assert.Single(archivedRevisions);
+        Assert.Equal(RevisionStatus.Archived, archivedRevisions.First().Status);
+    }
+
+    [Fact]
+    public async Task GetAllByStatusAsync_WithRevisionKey_ShouldReturnOnlyRevisionsWithSpecifiedStatusAndKey()
+    {
+        // Arrange
+        var entityId = Guid.NewGuid();
+        var firstRevision = await _fixture.Repository.CreateAsync(entityId);
+        var secondRevision = await _fixture.Repository.CreateAsync(entityId);
+        var updatedRevision = await _fixture.Repository.UpdateAsync(secondRevision.Key, Guid.NewGuid()); // This will archive the second revision
+
+        // Act
+        var activeRevisions = await _fixture.Repository.GetAllByStatusAsync(RevisionStatus.Active, secondRevision.Key);
+        var archivedRevisions = await _fixture.Repository.GetAllByStatusAsync(RevisionStatus.Archived, secondRevision.Key);
+
+        // Assert
+        Assert.Single(activeRevisions);
+        Assert.Equal(updatedRevision.Id, activeRevisions.First().Id);
+        Assert.Equal(RevisionStatus.Active, activeRevisions.First().Status);
+
+        Assert.Single(archivedRevisions);
+        Assert.Equal(secondRevision.Id, archivedRevisions.First().Id);
+        Assert.Equal(RevisionStatus.Archived, archivedRevisions.First().Status);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ShouldArchivePreviousRevisionAndSetNewToActive()
+    {
+        // Arrange
+        var entityId = Guid.NewGuid();
+        var firstRevision = await _fixture.Repository.CreateAsync(entityId);
+
+        // Act
+        var updatedRevision = await _fixture.Repository.UpdateAsync(firstRevision.Key, Guid.NewGuid());
+        var archivedRevision = await _fixture.Repository.GetAsync(firstRevision.Key, firstRevision.Revision);
+
+        // Assert
+        Assert.Equal(RevisionStatus.Active, updatedRevision.Status);
+        Assert.NotNull(archivedRevision);
+        Assert.Equal(RevisionStatus.Archived, archivedRevision.Status);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_ShouldArchivePreviousRevisionAndSetNewToActive()
+    {
+        // Arrange
+        var entityId = Guid.NewGuid();
+        var firstRevision = await _fixture.Repository.CreateAsync(entityId);
+
+        // Act
+        var deletedRevision = await _fixture.Repository.DeleteAsync(firstRevision.Key);
+        var archivedRevision = await _fixture.Repository.GetAsync(firstRevision.Key, firstRevision.Revision);
+
+        // Assert
+        Assert.Equal(RevisionStatus.Active, deletedRevision.Status);
+        Assert.NotNull(archivedRevision);
+        Assert.Equal(RevisionStatus.Archived, archivedRevision.Status);
+    }
+
+    [Fact]
+    public async Task RestoreAsync_ShouldArchivePreviousRevisionAndSetNewToActive()
+    {
+        // Arrange
+        var entityId = Guid.NewGuid();
+        var firstRevision = await _fixture.Repository.CreateAsync(entityId);
+        var deletedRevision = await _fixture.Repository.DeleteAsync(firstRevision.Key);
+
+        // Act
+        var restoredRevision = await _fixture.Repository.RestoreAsync(deletedRevision.Key);
+        var archivedRevision = await _fixture.Repository.GetAsync(deletedRevision.Key, deletedRevision.Revision);
+
+        // Assert
+        Assert.Equal(RevisionStatus.Active, restoredRevision.Status);
+        Assert.NotNull(archivedRevision);
+        Assert.Equal(RevisionStatus.Archived, archivedRevision.Status);
+    }
 }

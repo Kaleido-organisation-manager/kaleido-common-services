@@ -24,4 +24,5 @@ where TBuilder : BaseRevisionBuilder<T>, new()
     public Task<IEnumerable<T>> FindAllAsync(Expression<Func<T, bool>> predicate, Guid? revisionKey = null, CancellationToken cancellationToken = default);
     public Task<T?> GetHistoricAsync(Guid revisionKey, DateTime pointInTime, CancellationToken cancellationToken = default);
     public Task<IEnumerable<T>> GetAllByEntityIdAsync(Guid entityId, Guid? revisionKey = null, CancellationToken cancellationToken = default);
+    public Task<IEnumerable<T>> GetAllByStatusAsync(RevisionStatus status, Guid? revisionKey = null, CancellationToken cancellationToken = default);
 }

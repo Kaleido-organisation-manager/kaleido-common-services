@@ -11,7 +11,8 @@ where T : BaseRevisionEntity, new()
     private readonly T _instance = new()
     {
         Id = Guid.NewGuid(),
-        CreatedAt = DateTime.UtcNow
+        CreatedAt = DateTime.UtcNow,
+        Status = RevisionStatus.Active
     };
 
     public virtual BaseRevisionBuilder<T> FromRevision(T? revision)

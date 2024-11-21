@@ -11,6 +11,7 @@ public class BaseRevisionEntity : BaseEntity
     public int Revision { get; set; }
     public RevisionAction Action { get; set; }
     public DateTime CreatedAt { get; set; }
+    public RevisionStatus Status { get; set; } = RevisionStatus.Active;
 
     public override bool Equals(object? obj)
     {
@@ -23,13 +24,14 @@ public class BaseRevisionEntity : BaseEntity
 
         return revision.Key == Key && revision.EntityId == EntityId
             && revision.Revision == Revision && revision.Action == Action
-            && revision.CreatedAt.Equals(CreatedAt);
+            && revision.CreatedAt.Equals(CreatedAt)
+            && revision.Status == Status;
     }
 
     public override int GetHashCode()
     {
         // return base.GetHashCode();
-        return HashCode.Combine(base.GetHashCode(), Key, EntityId, Revision, Action, CreatedAt);
+        return HashCode.Combine(base.GetHashCode(), Key, EntityId, Revision, Action, CreatedAt, Status);
     }
 
     public BaseRevisionEntity FromRevision(BaseRevisionEntity revision)
@@ -40,6 +42,7 @@ public class BaseRevisionEntity : BaseEntity
         Action = revision.Action != default ? revision.Action : Action;
         CreatedAt = revision.CreatedAt != default ? revision.CreatedAt : CreatedAt;
         Id = revision.Id != default ? revision.Id : Id;
+        Status = revision.Status != default ? revision.Status : Status;
 
         return this;
     }
