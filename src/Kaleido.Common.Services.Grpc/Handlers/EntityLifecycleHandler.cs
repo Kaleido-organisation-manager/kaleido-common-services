@@ -219,7 +219,11 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
             });
     }
 
-    public virtual async Task<IEnumerable<EntityLifeCycleResult<TEntity, TRevision>>> FindAsync(Expression<Func<TEntity, bool>> predicate, Expression<Func<TRevision, bool>> revisionPredicate, Guid? key = null, CancellationToken cancellationToken = default)
+    public virtual async Task<IEnumerable<EntityLifeCycleResult<TEntity, TRevision>>> FindAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        Expression<Func<TRevision, bool>> revisionPredicate,
+        Guid? key = null,
+        CancellationToken cancellationToken = default)
     {
         var revisions = await RevisionRepository.FindAllAsync(revisionPredicate, key, cancellationToken);
 
@@ -239,9 +243,7 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
             return Enumerable.Empty<EntityLifeCycleResult<TEntity, TRevision>>();
         }
 
-        var entityRevisions = key.HasValue
-            ? revisions.Where(r => r.EntityId == entity.Id)
-            : await RevisionRepository.GetAllByEntityIdAsync(entity.Id);
+        var entityRevisions = revisions.Where(r => r.EntityId == entity.Id);
 
         if (!entityRevisions.Any())
         {
