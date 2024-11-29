@@ -225,38 +225,44 @@ where TBuilder : BaseRevisionBuilder<TRevision>, new()
         Guid? key = null,
         CancellationToken cancellationToken = default)
     {
-        var revisions = await RevisionRepository.FindAllAsync(revisionPredicate, key, cancellationToken);
-
-        var entityIds = revisions.Select(r => r.EntityId).Distinct().ToList();
-
-        if (!entityIds.Any())
+        // If we have a key, use it to get specific revisions
+        if (key.HasValue)
         {
-            return new List<EntityLifeCycleResult<TEntity, TRevision>>();
-        }
+            var revisions = await RevisionRepository.GetAllAsync(key.Value, cancellationToken);
+            var filteredRevisions = revisions.Where(revisionPredicate.Compile());
 
-        var entity = key.HasValue
-            ? await EntityRepository.FindAsync(e => entityIds.Contains(e.Id) && predicate.Compile()(e), cancellationToken)
-            : await EntityRepository.FindAsync(predicate, cancellationToken);
-
-        if (entity == null)
-        {
-            return Enumerable.Empty<EntityLifeCycleResult<TEntity, TRevision>>();
-        }
-
-        var entityRevisions = revisions.Where(r => r.EntityId == entity.Id);
-
-        if (!entityRevisions.Any())
-        {
-            throw new RevisionNotFoundException($"Could not resolve any revisions for entity with id {entity.Id}");
-        }
-
-        return entityRevisions
-            .OrderByDescending(x => x.CreatedAt)
-            .Select(r => new EntityLifeCycleResult<TEntity, TRevision>
+            if (!filteredRevisions.Any())
             {
-                Revision = r,
-                Entity = entity
-            });
+                return Enumerable.Empty<EntityLifeCycleResult<TEntity, TRevision>>();
+            }
+
+            var entity = await EntityRepository.FindAsync(predicate, cancellationToken);
+            if (entity == null)
+            {
+                return Enumerable.Empty<EntityLifeCycleResult<TEntity, TRevision>>();
+            }
+
+            return filteredRevisions
+                .OrderByDescending(x => x.CreatedAt)
+                .Select(r => new EntityLifeCycleResult<TEntity, TRevision>
+                {
+                    Revision = r,
+                    Entity = entity
+                });
+        }
+
+        // If no key, search all revisions that match the filter
+        var allRevisions = await RevisionRepository.FindAllAsync(revisionPredicate, cancellationToken: cancellationToken);
+        var entities = await EntityRepository.FindAllAsync(predicate, cancellationToken: cancellationToken);
+
+        return entities.SelectMany(entity =>
+            allRevisions.Where(r => r.EntityId == entity.Id)
+                .OrderByDescending(x => x.CreatedAt)
+                .Select(r => new EntityLifeCycleResult<TEntity, TRevision>
+                {
+                    Revision = r,
+                    Entity = entity
+                }));
     }
 
     public virtual async Task<IEnumerable<EntityLifeCycleResult<TEntity, TRevision>>> GetAllAsync(Guid? key = null, CancellationToken cancellationToken = default)
