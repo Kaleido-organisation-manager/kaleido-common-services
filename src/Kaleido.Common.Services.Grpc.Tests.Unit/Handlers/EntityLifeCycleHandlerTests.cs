@@ -261,6 +261,54 @@ namespace Kaleido.Common.Services.Grpc.Tests.Unit.Handlers
         }
 
         [Fact]
+        public async Task FindAsync_WithRevisionFilter_ShouldReturnSameResultsAsFindAllAsync()
+        {
+            // Arrange
+            var entity = new BaseEntity { Id = Guid.NewGuid() };
+            var createResult = await _fixture.Handler.CreateAsync(entity);
+            var updateResult = await _fixture.Handler.UpdateAsync(createResult.Key, new BaseEntity { Id = Guid.NewGuid() });
+            await _fixture.Handler.DeleteAsync(createResult.Key);
+            await _fixture.Handler.RestoreAsync(createResult.Key);
+
+            // Act
+            var findAllResult = await _fixture.Handler.FindAllAsync(
+                e => e.Id == updateResult.Entity.Id,
+                r => r.Action != RevisionAction.Deleted && r.Status == RevisionStatus.Active);
+
+            var findResult = await _fixture.Handler.FindAsync(
+                e => e.Id == updateResult.Entity.Id,
+                r => r.Action != RevisionAction.Deleted && r.Status == RevisionStatus.Active);
+
+            // Assert
+            Assert.Equal(findAllResult.Count(), findResult.Count());
+            Assert.Equal(
+                findAllResult.Select(r => r.Revision.Key).OrderBy(k => k),
+                findResult.Select(r => r.Revision.Key).OrderBy(k => k));
+        }
+
+        [Fact]
+        public async Task FindAsync_WithRevisionFilter_ShouldOnlyReturnActiveNonDeletedRevisions()
+        {
+            // Arrange
+            var entity = new BaseEntity { Id = Guid.NewGuid() };
+            var createResult = await _fixture.Handler.CreateAsync(entity);
+            var updateResult = await _fixture.Handler.UpdateAsync(createResult.Key, new BaseEntity { Id = Guid.NewGuid() });
+            var deleteResult = await _fixture.Handler.DeleteAsync(createResult.Key);
+            var restoreResult = await _fixture.Handler.RestoreAsync(createResult.Key);
+
+            // Act
+            var result = await _fixture.Handler.FindAsync(
+                e => e.Id == updateResult.Entity.Id,
+                r => r.Action != RevisionAction.Deleted && r.Status == RevisionStatus.Active);
+
+            // Assert
+            Assert.Single(result);
+            var revision = result.First().Revision;
+            Assert.Equal(RevisionStatus.Active, revision.Status);
+            Assert.NotEqual(RevisionAction.Deleted, revision.Action);
+        }
+
+        [Fact]
         public async Task GetHistoricAsync_ReturnsEntity_AtPointInTime()
         {
             // Arrange
