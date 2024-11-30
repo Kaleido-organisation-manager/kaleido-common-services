@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using Kaleido.Common.Services.Grpc.Builders;
+using Kaleido.Common.Services.Grpc.Constants;
 using Kaleido.Common.Services.Grpc.Models;
 
 namespace Kaleido.Common.Services.Grpc.Repositories.Interfaces;

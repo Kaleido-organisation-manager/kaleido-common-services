@@ -1,4 +1,4 @@
-namespace Kaleido.Common.Services.Grpc.Models;
+namespace Kaleido.Common.Services.Grpc.Constants;
 
 public enum RevisionStatus
 {
