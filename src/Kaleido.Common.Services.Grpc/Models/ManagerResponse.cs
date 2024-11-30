@@ -16,7 +16,6 @@ public readonly struct ManagerResponse<T> where T : class
     public static ManagerResponse<T> Success(T result) => new(ManagerResponseState.Success, result);
     public static ManagerResponse<T> NotFound() => new(ManagerResponseState.NotFound);
     public static ManagerResponse<T> NotModified() => new(ManagerResponseState.NotModified);
-    public static ManagerResponse<T> Invalid() => new(ManagerResponseState.Invalid);
 }
 
 public readonly struct ManagerResponse<T1, T2> where T1 : class where T2 : class
@@ -36,5 +35,4 @@ public readonly struct ManagerResponse<T1, T2> where T1 : class where T2 : class
         new(ManagerResponseState.Success, result1, result2);
     public static ManagerResponse<T1, T2> NotFound() => new(ManagerResponseState.NotFound);
     public static ManagerResponse<T1, T2> NotModified() => new(ManagerResponseState.NotModified);
-    public static ManagerResponse<T1, T2> Invalid() => new(ManagerResponseState.Invalid);
 }
