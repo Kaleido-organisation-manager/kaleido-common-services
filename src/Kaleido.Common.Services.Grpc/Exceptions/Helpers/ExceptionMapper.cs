@@ -4,7 +4,7 @@ using Grpc.Core;
 using Kaleido.Common.Services.Grpc.Exceptions;
 using Microsoft.AspNetCore.Connections;
 
-namespace Kaleido.Modules.Services.Grpc.Categories.Common.Helpers;
+namespace Kaleido.Common.Services.Grpc.Exceptions.Helpers;
 
 public static class ExceptionMapper
 {

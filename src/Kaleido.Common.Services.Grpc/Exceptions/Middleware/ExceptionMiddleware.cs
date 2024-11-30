@@ -1,5 +1,5 @@
 using Grpc.Core;
-using Kaleido.Modules.Services.Grpc.Categories.Common.Helpers;
+using Kaleido.Common.Services.Grpc.Exceptions.Helpers;
 using Microsoft.AspNetCore.Http;
 
 namespace Kaleido.Common.Services.Grpc.Exceptions.Middleware;
