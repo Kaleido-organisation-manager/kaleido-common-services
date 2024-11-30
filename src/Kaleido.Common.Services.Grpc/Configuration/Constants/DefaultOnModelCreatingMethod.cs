@@ -15,6 +15,7 @@ public static class DefaultOnModelCreatingMethod
         entity.Property(e => e.CreatedAt).IsRequired().HasColumnType("timestamp with time zone");
         entity.Property(e => e.Revision).IsRequired().HasColumnType("int");
         entity.Property(e => e.Action).IsRequired().HasColumnType("varchar(8)");
+        entity.Property(e => e.Status).IsRequired().HasColumnType("varchar(16)");
 
         entity.HasIndex(e => e.Key);
     }
