@@ -24,10 +24,22 @@ public static class ExceptionMapper
                     $"Entity not found for {context}",
                     exception)),
 
-            InvalidOperationException => new RpcException(
+            EntityNotFoundException => new RpcException(
                 new Status(
                     StatusCode.NotFound,
                     $"Entity not found for {context}",
+                    exception)),
+
+            NotModifiedException => new RpcException(
+                new Status(
+                    StatusCode.AlreadyExists,
+                    $"Entity already exists for {context}: {exception.Message}",
+                    exception)),
+
+            InvalidOperationException => new RpcException(
+                new Status(
+                    StatusCode.FailedPrecondition,
+                    $"Invalid operation for {context}: {exception.Message}",
                     exception)),
 
             ArgumentException => new RpcException(
