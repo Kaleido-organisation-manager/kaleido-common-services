@@ -60,6 +60,10 @@ where EntityContext : DbContext, IKaleidoDbContext<TEntity>
 
     public virtual async Task<TEntity?> GetAsync(Guid id, CancellationToken cancellationToken = default)
     {
+        if (id == Guid.Empty)
+        {
+            throw new ArgumentException("Id cannot be empty", nameof(id));
+        }
         return await DbSet.FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
     }
 }
