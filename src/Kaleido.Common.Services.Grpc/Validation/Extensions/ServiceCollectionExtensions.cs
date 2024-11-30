@@ -1,11 +1,34 @@
 using System.Reflection;
 using FluentValidation;
+using Grpc.AspNetCore.Server;
+using Kaleido.Common.Services.Grpc.Validation.Middleware;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Kaleido.Common.Services.Grpc.Validation.Extensions;
 
 public static class ServiceCollectionExtensions
 {
+    public static IServiceCollection AddGrpcValidation(this IServiceCollection services, Assembly[]? assemblies = null)
+    {
+        services.AddSingleton<ValidationInterceptor>();
+
+        if (assemblies == null)
+        {
+            services.AddValidators();
+        }
+        else
+        {
+            services.AddValidators(assemblies);
+        }
+
+        services.Configure<GrpcServiceOptions>(options =>
+        {
+            options.Interceptors.Add<ValidationInterceptor>();
+        });
+
+        return services;
+    }
+
     public static IServiceCollection AddValidators(this IServiceCollection services)
     {
         var entryAssembly = Assembly.GetEntryAssembly();
