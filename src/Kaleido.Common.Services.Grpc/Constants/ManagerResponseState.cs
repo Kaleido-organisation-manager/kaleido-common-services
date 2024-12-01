@@ -4,5 +4,6 @@ public enum ManagerResponseState
 {
     Success,
     NotFound,
-    NotModified
+    NotModified,
+    Unknown
 }
